@@ -7,6 +7,9 @@ def get_address(myconn):
     remote_cmd = 'grep hostname /tmp/config.json'
     (stdin, stdout, stderr) = myconn.exec_command(remote_cmd)
     out = "{}".format(stdout.read())
+    out = str(out.split()[2])
+    out = str(out[6:].split(",")[0])
+    out = str(out.split("\"")[0])
     print(out)
     # print("{}".format(type(myconn)))
     # print("Options available to deal with the connectios are many like\n{}".format(dir(myconn)))
