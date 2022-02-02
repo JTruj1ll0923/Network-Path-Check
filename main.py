@@ -64,7 +64,10 @@ def main():
     user = 'root'
     pswd = 'admin'
     port = 22
-    final_ip = "fd8d:1900:2729:7415::1"
+    final_ip = "fd8d::1"
+    prefix = str(final_ip.split(":")[0] + ":" + final_ip.split(":")[1])
+    # print(prefix)
+
     # sec_key = '/mycert.ppk'
 
     myconn = paramiko.SSHClient()
@@ -75,10 +78,13 @@ def main():
     i = 1
     ip_hops = {}
     for hop in hops:
-        if i == 1 or i == 2:  # ignoring the first two hops
+        # if i < 5:  # ignoring the first two hops
+        #     i += 1
+        #     continue
+        ip = hop.address
+        if prefix not in ip:
             i += 1
             continue
-        ip = hop.address
         try:
             session = myconn.connect(ip, username=user, password=pswd, port=port)
             ip_hops[ip] = {}
