@@ -2,6 +2,7 @@ import paramiko
 from icmplib import ping, multiping, traceroute, resolve
 from icmplib import async_ping, async_multiping, async_resolve
 from mac_vendor_lookup import MacLookup
+import ipaddress
 
 
 def get_address(myconn):
@@ -65,8 +66,19 @@ def main():
     user = 'root'
     pswd = 'admin'
     port = 22
-    final_ip = "fd8d::1"
-    prefix = str(final_ip.split(":")[0] + ":" + final_ip.split(":")[1])
+    target_ip = ""
+    while True:
+        try:
+            target_ip = str(input("What is the target MBU IPv6?"))
+            if ipaddress.IPv6Address(target_ip):
+                break
+            else:
+                print("Invalid IPv6")
+                continue
+        except ValueError:
+            print(ValueError)
+            "Invalid IPv6"
+    prefix = str(target_ip.split(":")[0] + ":" + target_ip.split(":")[1])
     # print(prefix)
 
     # sec_key = '/mycert.ppk'
