@@ -109,7 +109,11 @@ def main():
             routers[ip] = "No Router"
         else:
             routers[ip] = MacLookup().lookup(ip_hops[ip]['router'])
-
+    j = 1
+    for ip in ip_hops:
+        print(f"Hop {j} = {ip}\t---\t{ip_hops[ip]['address']}\n"
+              f"\tRouter = {ip_hops[ip]['router']}\t---\t{routers[ip]}\n")
+        j += 1
     # print(ip_hops)
     # print(ip_hops["fd8d:1900:2729:7415::1"])
 
