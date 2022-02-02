@@ -1,6 +1,7 @@
 import paramiko
 from icmplib import ping, multiping, traceroute, resolve
 from icmplib import async_ping, async_multiping, async_resolve
+from mac_vendor_lookup import MacLookup
 
 
 def get_address(myconn):
@@ -102,8 +103,15 @@ def main():
         # ip_hops[hop.address]["address"] = get_address(hop.address)
         # ip_hops[hop.address]["router"] = get_mac(hop.address)
         i += 1
-    print(ip_hops)
-    print(ip_hops["fd8d:1900:2729:7415::1"])
+    routers = {}
+    for ip in ip_hops:
+        if ip_hops[ip]['router'] == "\'":
+            routers[ip] = "No Router"
+        else:
+            routers[ip] = MacLookup().lookup(ip_hops[ip]['router'])
+
+    # print(ip_hops)
+    # print(ip_hops["fd8d:1900:2729:7415::1"])
 
 
 if __name__ == '__main__':
