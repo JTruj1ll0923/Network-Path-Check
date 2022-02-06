@@ -47,10 +47,64 @@ def get_mac(myconn):
     #     return "Error"
 
 
+def route_print(ip_hops, routers):
+    j = 1
+    for ip in ip_hops:
+        print(f"Hop {j} = {ip}\n"
+              f"\tAddress = {ip_hops[ip]['address']}\n"
+              f"\tMBU Version = {ip_hops[ip]['version']}\n"
+              f"\tRouter MAC = {ip_hops[ip]['router']}\n"
+              f"\tRouter OUI = {routers[ip]}")
+        j += 1
+
+
+def gather_route(hops, prefix, myconn, ip_hops=None, routers=None, user="root", pswd="admin", port=22):
+    if routers is None:
+        routers = {}
+    if ip_hops is None:
+        ip_hops = {}
+    i = 1
+    for hop in hops:
+        # if i < 5:  # ignoring the first two hops
+        #     i += 1
+        #     continue
+        ip = hop.address
+        if prefix not in ip:
+            i += 1
+            continue
+        try:
+            # print(ip)
+            session = myconn.connect(ip, username=user, password=pswd, port=port)
+            ip_hops[ip] = {}
+            ip_hops[ip]["address"] = get_address(myconn)
+            ip_hops[ip]["router"] = get_mac(myconn)
+            ip_hops[ip]["version"] = get_version(myconn)
+            myconn.close()
+            if ip_hops[ip]['router'] == "\'":
+                routers[ip] = "No Router"
+            else:
+                routers[ip] = MacLookup().lookup(ip_hops[ip]['router'])
+
+            # print(f"Hop {j} = {ip}\n"
+            #       f"\tAddress = {ip_hops[ip]['address']}\n"
+            #       f"\tMBU Version = {ip_hops[ip]['version']}\n"
+            #       f"\tRouter MAC = {ip_hops[ip]['router']}\n"
+            #       f"\tRouter OUI = {routers[ip]}")
+            # j += 1
+        # print(f"Hop {i} = {hop.address} --- "
+        #       f"\t{get_address(hop.address)}\n"
+        #       f"\tRouter = {get_mac(hop.address)}\n")
+              # f"\tVersion = {get_version(hop.address)}\n")
+        except Exception as e:
+            print(e)
+            return "Error"
+        # ip_hops[hop.address] = {}
+        # ip_hops[hop.address]["address"] = get_address(hop.address)
+        # ip_hops[hop.address]["router"] = get_mac(hop.address)
+        i += 1
+
+
 def main():
-    user = 'root'
-    pswd = 'admin'
-    port = 22
     target_ip = ""
     while True:
         try:
@@ -73,58 +127,22 @@ def main():
     hops = traceroute(target_ip)
     # print('Distance/TTL    Address    Average round-trip time')
     # last_distance = 0
-    i = 1
-    j = 1
+    # i = 1
+    # j = 1
     ip_hops = {}
     routers = {}
-    for hop in hops:
-        # if i < 5:  # ignoring the first two hops
-        #     i += 1
-        #     continue
-        ip = hop.address
-        if prefix not in ip:
-            i += 1
-            continue
-        try:
-            # print(ip)
-            session = myconn.connect(ip, username=user, password=pswd, port=port)
-            ip_hops[ip] = {}
-            ip_hops[ip]["address"] = get_address(myconn)
-            ip_hops[ip]["router"] = get_mac(myconn)
-            ip_hops[ip]["version"] = get_version(myconn)
-            myconn.close()
-            if ip_hops[ip]['router'] == "\'":
-                routers[ip] = "No Router"
-            else:
-                routers[ip] = MacLookup().lookup(ip_hops[ip]['router'])
-
-            print(f"Hop {j} = {ip}\n"
-                  f"\tAddress = {ip_hops[ip]['address']}\n"
-                  f"\tMBU Version = {ip_hops[ip]['version']}\n"
-                  f"\tRouter MAC = {ip_hops[ip]['router']}\n"
-                  f"\tRouter OUI = {routers[ip]}")
-            j += 1
-        # print(f"Hop {i} = {hop.address} --- "
-        #       f"\t{get_address(hop.address)}\n"
-        #       f"\tRouter = {get_mac(hop.address)}\n")
-              # f"\tVersion = {get_version(hop.address)}\n")
-        except Exception as e:
-            print(e)
-            return "Error"
-        # ip_hops[hop.address] = {}
-        # ip_hops[hop.address]["address"] = get_address(hop.address)
-        # ip_hops[hop.address]["router"] = get_mac(hop.address)
-        i += 1
+    gather_route(hops, prefix, myconn, ip_hops, routers)
 
     while True:
         try:
-            print("\n\n")
+            # print("\n\n")
             print("What would you like to do?")
             print("1. Print all IPs")
             print("2. Print all Routers")
             print("3. Print all Versions")
             print("4. MTR all IPs")
-            print("5. Exit")
+            print("5. Print full route information")
+            print("6. Exit")
             choice = int(input("Choice: "))
             if choice == 1:
                 print("\n\n")
@@ -142,6 +160,9 @@ def main():
                 print("\n\n")
                 # mtr(ip_hops)
             elif choice == 5:
+                print("\n\n")
+                route_print(ip_hops, routers)
+            elif choice == 6:
                 break
             else:
                 print("Invalid Choice")
