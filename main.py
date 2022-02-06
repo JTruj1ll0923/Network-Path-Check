@@ -19,32 +19,17 @@ def get_address(myconn):
     return out
 
 
-def get_version(ip):
-    if ip == "" or ip == " " or ip == "\n":
-        return "No IP"
-    user = 'root'
-    pswd = 'admin'
-    port = 22
-    myconn = paramiko.SSHClient()
-    myconn.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    # my_rsa_key = paramiko.RSAKey.from_private_key_file(sec_key)
+def get_version(myconn):
 
-    try:
-        session = myconn.connect(ip, username=user, password=pswd, port=port)
-
-        remote_cmd = 'cat /etc/banner | grep -i rev'
-        (stdin, stdout, stderr) = myconn.exec_command(remote_cmd)
-        out = "{}".format(stdout.read())
-        # sys = out.find("CPU")
-        # print(sys)
-        # print(out)
-        # print("{}".format(type(myconn)))
-        # print("Options available to deal with the connectios are many like\n{}".format(dir(myconn)))
-        myconn.close()
-        return out
-    except Exception as e:
-        print(e)
-        return "Error"
+    remote_cmd = 'grep rev /usr/lib/release/firmux'
+    (stdin, stdout, stderr) = myconn.exec_command(remote_cmd)
+    version = "{}".format(stdout.read())
+    version = version[2:-3]
+    # print(out)
+    # print("{}".format(type(myconn)))
+    # print("Options available to deal with the connectios are many like\n{}".format(dir(myconn)))
+    #     myconn.close()
+    return version
 
 
 def get_mac(myconn):
@@ -106,14 +91,18 @@ def main():
             ip_hops[ip] = {}
             ip_hops[ip]["address"] = get_address(myconn)
             ip_hops[ip]["router"] = get_mac(myconn)
+            ip_hops[ip]["version"] = get_version(myconn)
             myconn.close()
             if ip_hops[ip]['router'] == "\'":
                 routers[ip] = "No Router"
             else:
                 routers[ip] = MacLookup().lookup(ip_hops[ip]['router'])
 
-            print(f"Hop {j} = {ip}\t---\t{ip_hops[ip]['address']}\n"
-                  f"\tRouter = {ip_hops[ip]['router']}\t---\t{routers[ip]}\n")
+            print(f"Hop {j} = {ip}\n"
+                  f"\tAddress = {ip_hops[ip]['address']}\n"
+                  f"\tMBU Version = {ip_hops[ip]['version']}\n"
+                  f"\tRouter MAC = {ip_hops[ip]['router']}\n"
+                  f"\tRouter OUI = {routers[ip]}")
             j += 1
         # print(f"Hop {i} = {hop.address} --- "
         #       f"\t{get_address(hop.address)}\n"
@@ -126,6 +115,38 @@ def main():
         # ip_hops[hop.address]["address"] = get_address(hop.address)
         # ip_hops[hop.address]["router"] = get_mac(hop.address)
         i += 1
+
+    while True:
+        try:
+            print("\n\n")
+            print("What would you like to do?")
+            print("1. Print all IPs")
+            print("2. Print all Routers")
+            print("3. Print all Versions")
+            print("4. MTR all IPs")
+            print("5. Exit")
+            choice = int(input("Choice: "))
+            if choice == 1:
+                print("\n\n")
+                for ip in ip_hops:
+                    print(ip)
+            elif choice == 2:
+                print("\n\n")
+                for ip in routers:
+                    print(ip)
+            elif choice == 3:
+                print("\n\n")
+                for ip in ip_hops:
+                    print(ip_hops[ip]['version'])
+            elif choice == 4:
+                print("\n\n")
+                # mtr(ip_hops)
+            elif choice == 5:
+                break
+            else:
+                print("Invalid Choice")
+        except ValueError:
+            print("Invalid Choice")
     # routers = {}
     # for ip in ip_hops:
     #     if ip_hops[ip]['router'] == "\'":
