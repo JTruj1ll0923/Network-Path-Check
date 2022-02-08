@@ -8,6 +8,7 @@ paramiko = "*"
 icmplib = "*"
 pylint = "*"
 mac-vendor-lookup = "*"
+prettytable = "*"
 
 [dev-packages]
 
