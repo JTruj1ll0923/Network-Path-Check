@@ -325,7 +325,8 @@ def main():
             print("3. Print all Versions")
             print("4. MTR all IPs")
             print("5. Print full route information")
-            print("6. Exit")
+            print("6. Route Change Check")
+            print("7. Exit")
             choice = int(input("Choice: "))
             if choice == 1:
                 print("\n\n")
@@ -343,11 +344,14 @@ def main():
                     i += 1
             elif choice == 4:
                 print("\n\n")
-                mtr(ip_list, hop_info)
+                mtr(ip_list, hop_info, target_ip, prefix)
             elif choice == 5:
                 print("\n\n")
                 route_print(hop_info, routers)
             elif choice == 6:
+                print(f"\n{route_change_check(target_ip, prefix, ip_list, hop_info)}")
+            elif choice == 7:
+                print("Exiting...")
                 break
             else:
                 print("Invalid Choice")
