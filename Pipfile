@@ -9,8 +9,9 @@ icmplib = "*"
 pylint = "*"
 mac-vendor-lookup = "*"
 prettytable = "*"
+asyncssh = "*"
 
 [dev-packages]
 
 [requires]
-python_version = "3.9"
+python_version = "3.10"
