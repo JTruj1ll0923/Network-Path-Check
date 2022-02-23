@@ -98,7 +98,17 @@ async def async_mtr(ips, hop_info, target_ip, prefix):
     mtr_results = {}
     for ip in ips:
         mtr_results[ip] = {}
-
+    total_pings = 1
+    while total_pings != 0:
+        try:
+            total_pings = int(input("How many pings would you like to send? "))
+            if total_pings == 0:
+                return "Cancelled MTR"
+            else:
+                break
+        except ValueError:
+            print("Please enter a number.")
+            continue
     print("Initializing MTR...")
     for ip in ips:  # Initialize
         mtr_results[ip]['address'] = 0
@@ -110,8 +120,9 @@ async def async_mtr(ips, hop_info, target_ip, prefix):
 
     from prettytable import PrettyTable
     pingnum = 1
-    while True:
+    while pingnum <= total_pings:
         await asyncio.sleep(0.25)
+        # print(route_change_check(target_ip, prefix, ips, hop_info))
         response = await async_multiping(ips, count=1)
         print(f"\n\n\n\n\n")
         mtr_table = PrettyTable(['IP', 'Address', 'RTT', 'Packets Sent', 'Packets Received', 'Packet Loss', 'Jitter'])
@@ -134,13 +145,16 @@ async def async_mtr(ips, hop_info, target_ip, prefix):
             #       f"\tPacket Loss = {mtr_results[ip]['packet_loss']}"
             #       f"\tJitter = {mtr_results[ip]['jitter']}")
         print(mtr_table)
+        if pingnum == total_pings:
+            print("\nFinished MTR")
+            break
         pingnum += 1
 
         # print(f"\t\tmtr\t\t{mtr_results}\n")
 
 
-def mtr(ips, hop_info):
-    asyncio.run(async_mtr(ips, hop_info))
+def mtr(ips, hop_info, target_ip, prefix):
+    asyncio.run(async_mtr(ips, hop_info, target_ip, prefix))
     # hosts = multiping(ips)
     # for host in hosts:
     #     if host.is_alive:
