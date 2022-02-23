@@ -7,6 +7,13 @@ import asyncio
 from prettytable import PrettyTable
 
 
+def hop_to_ip(hops, prefix):
+    ip_list = []
+    for hop in hops:
+        if prefix not in hop.address:
+            continue
+        ip_list.append(hop.address)
+    return ip_list
 
 
 
