@@ -4,6 +4,8 @@ from icmplib import async_ping, async_multiping, async_resolve
 from mac_vendor_lookup import MacLookup
 import ipaddress
 import asyncio
+from prettytable import PrettyTable
+
 
 
 
