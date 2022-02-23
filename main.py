@@ -228,24 +228,34 @@ def gather_route(traceroute_hops, prefix, myconn, ip_list,
     if ip_list is None:
         ip_list = []
     i = 1
-    for hop in traceroute_hops:
+    for ip in ip_list:
         # if i < 5:  # ignoring the first two hops
         #     i += 1
         #     continue
-        ip = hop.address
-        if prefix not in ip:
-            i += 1
-            continue
+        # print(len(ip_list))
+        # print(i)
+        # print(ip_list[i])
+        # print(ip_list[i - 1])
+        # ip = ip_list[i]
+        # if prefix not in ip:
+        #     i += 1
+        #     continue
         try:
-            if ip not in ip_list:
-                ip_list.append(ip)
+            # if ip not in ip_list:
+            #     ip_list.append(ip)
             # print(ip)
-            session = myconn.connect(ip, username=user, password=pswd, port=port)
-            hop_info[ip] = {}
-            hop_info[ip]["address"] = get_address(myconn)
-            hop_info[ip]["router"] = get_mac(myconn)
-            hop_info[ip]["version"] = get_version(myconn)
-            myconn.close()
+            # get_tasks()
+            try:
+                session = myconn.connect(ip, username=user, password=pswd, port=port)
+                hop_info[ip] = {}
+                hop_info[ip]["address"] = get_address(myconn)
+                hop_info[ip]["router"] = get_mac(myconn)
+                hop_info[ip]["version"] = get_version(myconn)
+                myconn.close()
+            except Exception as e:
+                print(e)
+                print(f"{ip} is not reachable")
+                continue
             if hop_info[ip]['router'] == "\'":
                 routers[ip] = "No Router"
             else:
