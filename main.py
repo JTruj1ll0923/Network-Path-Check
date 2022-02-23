@@ -48,6 +48,36 @@ def ip_format(imported_ip_list, prefix):
 
 
 
+def route_change_check(target_ip, prefix, ip_list, hop_info):
+    new_traceroute = traceroute(target_ip)
+    new_ip_list = hop_to_ip(new_traceroute, prefix)
+    # print(new_ip_list)
+    new_ip_list = ip_format(new_ip_list, prefix)
+    # print(new_ip_list)
+    route_change = PrettyTable(["Hop Number", "Old Route", "New Route"])
+    # for hop in new_traceroute:
+    #     if prefix not in hop.address:
+    #         continue
+    #     new_ip_list.append(hop.address)
+    if new_ip_list != ip_list:
+        if len(new_ip_list) > len(ip_list):
+            for i in range(len(new_ip_list)):
+                try:
+                    route_change.add_row([i + 1, ip_list[i], new_ip_list[i]])
+                except IndexError:
+                    route_change.add_row([i + 1, "", new_ip_list[i]])
+        else:
+            for i in range(len(ip_list)):
+                try:
+                    route_change.add_row([i + 1, ip_list[i], new_ip_list[i]])
+                except IndexError:
+                    route_change.add_row([i + 1, ip_list[i], ""])
+        print(ip_list)
+        ip_list = new_ip_list
+        print(ip_list)
+        return route_change
+    else:
+        return "No Route Change"
 
 
 def get_tasks():
