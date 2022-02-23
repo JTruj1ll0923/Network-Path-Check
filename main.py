@@ -291,8 +291,8 @@ def main():
                 print("Invalid IPv6")
                 continue
         except ValueError:
-            print(ValueError)
-            "Invalid IPv6"
+            # print(ValueError)
+            print("Invalid IPv6")
     prefix = str(target_ip.split(":")[0] + ":" + target_ip.split(":")[1])
     # print(prefix)
 
@@ -300,6 +300,7 @@ def main():
 
     myconn = paramiko.SSHClient()
     myconn.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    print(f"Running traceroute to {target_ip}")
     traceroute_hops = traceroute(target_ip)
     # print('Distance/TTL    Address    Average round-trip time')
     # last_distance = 0
@@ -308,6 +309,11 @@ def main():
     hop_info = {}
     routers = {}
     ip_list = []
+    print(f"Formatting traceroute output for {target_ip}")
+    ip_list = hop_to_ip(traceroute_hops, prefix)
+    ip_list = ip_format(ip_list, prefix)
+    # print(ip_list)
+    print(f"Gathering information for hops in traceroute to {target_ip}")
     gather_route(traceroute_hops, prefix, myconn, ip_list, hop_info, routers)
 
     while True:
