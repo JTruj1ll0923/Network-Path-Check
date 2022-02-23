@@ -16,9 +16,55 @@ def hop_to_ip(hops, prefix):
     return ip_list
 
 
+def ip_format(imported_ip_list, prefix):
+    ip_list = imported_ip_list
+    formatted_ip_list = []
+    for ip in ip_list:
+        ip_split = ip.split(":")
+        # print(ip_split[len(ip_split) - 3])
+        # if len(ip_split[len(ip_split) - 3]) ==
+        # print(len())
+        # print(f"Split = {ip_split}")
+        # print(f"last section = {ip_split[len(ip_split) - 3]}")
+        # print(f"last length = {len(ip_split[len(ip_split) - 3])}")
+        # print(f"length after cut = {len(ip_split[len(ip_split) - 3]) - 2}")
+
+        if len(ip_split[len(ip_split) - 3]) > 1:
+            ip_split[len(ip_split) - 3] = ip_split[len(ip_split) - 3][:-2] + "00"
+        # if len(ip_split[len(ip_split) - 3]) == 1:
+        #     ip_split[len(ip_split) - 3] = ip_split[len(ip_split) - 3] + "000"
+        # elif len(ip_split[len(ip_split) - 3]) == 2:
+        #     ip_split[len(ip_split) - 3] = ip_split[len(ip_split) - 3] + "00"
+        # else:
+        #     ip_split[len(ip_split) - 3] = ip_split[len(ip_split) - 3][:-(len(ip_split[len(ip_split) - 3]) - 2)] + "00"
+        # print(ip_split)
 
 
-async def async_mtr(ips, hop_info):
+        # print(":".join(ip_split))
+        formatted_ip_list.append(":".join(ip_split))
+        # print(ip_split[len(ip_split) - 3][:-2] + "00")
+    return formatted_ip_list
+
+
+
+
+
+
+def get_tasks():
+    tasks = []
+
+    """
+    for var in variables:
+        # print(f"Var: {var}")
+        # print(f"Grabbing extras")
+        tasks.append(asyncio.create_task(async_test_maker(session, query, var, failed_list)))
+        # tasks.append(asyncio.create_task(session.execute(query, var)))
+        # tasks.append(asyncio.create_task(asyncio.sleep(0.5)))
+    return tasks
+    """
+
+
+async def async_mtr(ips, hop_info, target_ip, prefix):
     mtr_results = {}
     for ip in ips:
         mtr_results[ip] = {}
