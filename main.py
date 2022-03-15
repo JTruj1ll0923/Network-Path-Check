@@ -1,10 +1,46 @@
 import paramiko
+import asyncssh
 from icmplib import ping, multiping, traceroute, resolve
 from icmplib import async_ping, async_multiping, async_resolve
 from mac_vendor_lookup import MacLookup
 import ipaddress
 import asyncio
+from aiotraceroute import aiotraceroute
 from prettytable import PrettyTable
+import threading
+import logging
+import sys
+import requests
+import asyncio
+import aiohttp
+import json
+from prettytable import PrettyTable
+import pandas as pd
+import openpyxl
+import datetime
+import arrow
+
+import EeroTests
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
+
+async def quick_traceroute(target_ip, prefix=None, ip_list=None):
+    # if prefix is None:
+    #     prefix = ""
+    # if ip_list is None:
+    #     ip_list = []
+    # tr = aiotraceroute(target_ip)
+    # result = await tr.run()
+    # print(result)
+    async for n, addr, host in aiotraceroute(target_ip):
+        print(n, addr, host)
+
+
+def traceroute_start(target_ip, prefix, ip_list):
+    # asyncio.run(quick_traceroute(target_ip, prefix, ip_list))
+    asyncio.get_event_loop().run_until_complete(quick_traceroute("google.com"))
 
 
 def hop_to_ip(hops, prefix):
