@@ -1,2 +1,8 @@
 */*.xml
-*/*.idea
+*/.idea/
+*/dist
+*/build
+*.spec
+*.xlsx
+*.json
+*.txt
