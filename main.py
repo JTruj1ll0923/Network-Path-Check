@@ -506,6 +506,22 @@ def route_change_check(target_ip, prefix, ip_list, hop_info):
         return "No Route Change"
 
 
+def route_tests(hop_info, target_ip, prefix, ip_list):
+    i = 1
+    for ip in ip_list:
+        try:
+            if hop_info[ip]['router']['oui'] == "eero inc.":
+                print(f"{i} -- {hop_info[ip]['address']}\n{hop_info[ip]['router']['results']}")
+                i += 1
+            else:
+                print(f"{i} -- {hop_info[ip]['address']} does not have an Eero. No tests available.")
+                i += 1
+
+        except Exception as e:
+            print(e)
+            print(f"{ip} is not reachable")
+
+
 def path_check():
     try:
         target_ip = ip_check()
@@ -573,6 +589,8 @@ def path_check():
                     route_print(hop_info, routers)
                 elif choice == 6:
                     print(f"\n{route_change_check(target_ip, prefix, ip_list, hop_info)}")
+                elif choice == 7:
+                    route_tests(hop_info, target_ip, prefix, ip_list)
                 elif choice == 0:
                     print("Exiting...")
                     break
