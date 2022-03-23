@@ -42,7 +42,10 @@ def format_tests(tests):
         test_results[i] = {}
         test_results[i]['down'] = test['down_mbps']
         test_results[i]['up'] = test['up_mbps']
-        test_results[i]['date'] = test['date']
+        date = test['date']
+        date = arrow.get(date)
+        date = date.to('US/Mountain')
+        test_results[i]['date'] = date
         i += 1
     return test_results
 
