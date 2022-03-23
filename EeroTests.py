@@ -32,8 +32,6 @@ def slow_day_report(base_url, headers):
 
 
 def format_tests(tests):
-    # print(tests['data'])
-    # print(tests)
     tests = tests['data']
     i = 1
     test_results = {}
@@ -93,11 +91,7 @@ async def grab_eeros(base_url, headers):
                 offset = networks['pagination']['next']
                 offset = offset.split('?')[1]
                 offset = offset.split('=')[1]
-                # print(pagination)
-                # break
-                # print(f"Grabbing next page of networks: {offset}")
                 networks = list_networks(base_url, headers, params={"offset": offset})
-                # print(f"Grabbed next page of networks: {offset}")
             else:
                 print("That's all folks!")
                 break
@@ -112,8 +106,6 @@ async def grab_eeros(base_url, headers):
     # network_dict['date'] = time
     router_dict['date'] = time
     for network in network_list:  # Combine all Eero network dictionaries into one dictionary
-        # n = {**network, **network_dict}
-        # network_dict = n
         network_dict[i] = {}
         network_dict[i]['url'] = network['url']
         network_dict[i]['name'] = network['name']
@@ -134,24 +126,7 @@ async def grab_eeros(base_url, headers):
                 'serial': eero['serial'],
                 'url': network['url'],
             }
-            # print(router_dict[eero['mac_address']])
-            # router_dict[eero['mac_address']]['mac'] = eero['mac_address']
-            # router_dict[eero['mac_address']]['serial'] = eero['serial']
-            # router_dict[eero['mac_address']]['url'] = network['url']
-            # for e in eero:
-            #     print(f"e\t---\t{e}")
-            #     for dict in e:
-            #         print(f"dict\t---\t{dict}")
-            #         router_dict[dict['mac_address']] = {}
-            #         router_dict['mac_address']['serial_number'] = dict['serial_number']
-            #         router_dict['mac_address']['url'] = eero['url']
-
-        # print(f"{i}\t--\t{network}")
         i += 1
-
-    # print(network_dict)
-    # print(router_dict)
-
 
     df = pd.DataFrame.from_dict(network_dict, orient='index')
     df.to_csv('networks.xlsx', index=False)
@@ -161,9 +136,9 @@ async def grab_eeros(base_url, headers):
 
 
 async def single_eero_results(base_url, headers, customer_id):
-    print("Grabbing Eero results for customer ID: {}".format(customer_id))
+    # print("Grabbing Eero results for customer ID: {}".format(customer_id))
     tests = await speed_test_list(base_url, headers, customer_id)
-    print(f"Grabbed Eero result for customer ID: {customer_id}\t---\t{tests}")
+    # print(f"Grabbed Eero result for customer ID: {customer_id}\t---\t{tests}")
     test_results = format_tests(tests)
     table = PrettyTable(["Num", "Date", "Down", "Up"])
     i = 1
@@ -186,18 +161,15 @@ def search_by_mac(base_url, headers, mac=None):
             # print(data)
             id = id.split('/')
             id = id[len(id) - 1]
-            print(mac)
+            # print(mac)
             serial = data[mac]["0"]['serial']
-            print(serial)
+            # print(serial)
             # data = f"https://dashboard.eero.com/networks/{data}"
         json_file.close()
-        # result = asyncio.run(single_eero_results(base_url, headers, data))
-        # return result
-        # print(data)
-        return mac, serial
+        return id, serial
     except Exception as e:
-        print("No router with that MAC address found.")
-        return
+        # print("No network with that MAC address found.")
+        return "Missing Network", "Missing Serial"
 
 
 def search_by_serial(base_url, headers):
@@ -288,20 +260,11 @@ def mass_test(base_url, headers):
                         last_test = requests.get(speedtest_url, headers=headers, params={'limit': 1})
                         last_test = last_test.json()
                         last_test_time = last_test['data'][0]['date']
-                        # print(last_test)
-                        # break
-                        # last_test_time = arrow.now("UTC")
                         requests.post(speedtest_url, headers=headers)
                         last_test = requests.get(speedtest_url, headers=headers, params={'limit': 1})
                         last_test = last_test.json()
                         last_test = last_test['data'][0]['date']
-                        # print(last_test)
-                        # break
                         tests_done += 1
-                        # print(tests_done)
-                        # print(last_test_time)
-                        # print(last_test)
-                        # break
 
 
         except Exception as e:
@@ -333,10 +296,6 @@ def main():
                 else:
                     print("Exiting...")
                     break
-                # # results = asyncio.run(async_runner(base_url, headers))
-                # # print(results)
-                # for result in results:
-                #     print(json.dumps(result))
             elif choice == 3:
                 print("1. Search by MAC")
                 print("2. Search by Serial")
@@ -368,25 +327,4 @@ def main():
         except TypeError:
             print("Invalid choice")
             continue
-
-
-
-
-
-
-    # print(list_networks(base_url, headers)['pagination'])
-
-    # print(network_list)
-    # print(test_results)
-
-    # slow_day_report(base_url, headers)
-
-    # report = slow_day_report(base_url, headers)
-    # report = report['data']
-    # print(report)
-    # report = report['summaries']
-    # for r in report:
-    #     print(r)
-# if __name__ == '__main__':
-#     main()
 
