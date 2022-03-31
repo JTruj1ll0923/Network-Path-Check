@@ -295,34 +295,47 @@ def gather_route(traceroute_hops, prefix, myconn, ip_list,
     i = 1
 
     def go_check(ip):
-        try:
-            myconn.connect(ip, username=user, password=pswd, port=port)
-            hop_info[ip] = {}
-            hop_info[ip]["address"] = get_address(myconn)
-            hop_info[ip]["router"] = {}
-            mac = str(get_mac(myconn))
-            hop_info[ip]["router"]["mac"] = mac
-            if mac == "\'":
-                hop_info[ip]["router"]["mac"] = "N/A"
-                hop_info[ip]["router"]["oui"] = "N/A"
-                hop_info[ip]["router"]["url"] = "N/A"
-            else:
-                oui = MacLookup().lookup(mac)
-                hop_info[ip]["router"]["oui"] = oui
-                if hop_info[ip]["router"]["oui"] == "eero inc.":
-                    url, serial = EeroTests.search_by_mac(base_url, headers, mac)
-                    hop_info[ip]["router"]["url"] = url
-                    hop_info[ip]["router"]["serial"] = serial
-                    hop_info[ip]["router"]["results"] = \
-                        asyncio.run(EeroTests.single_eero_results(base_url, headers, url))
-                else:
+        while True:
+            try:
+                myconn.connect(ip, username=user, password=pswd, port=port)
+                hop_info[ip] = {}
+                hop_info[ip]["address"] = get_address(myconn)
+                hop_info[ip]["router"] = {}
+                mac = str(get_mac(myconn))
+                hop_info[ip]["router"]["mac"] = mac
+                # print(mac)
+                if mac == "\'":
+                    hop_info[ip]["router"]["mac"] = "N/A"
+                    hop_info[ip]["router"]["oui"] = "N/A"
                     hop_info[ip]["router"]["url"] = "N/A"
-            hop_info[ip]["version"] = get_version(myconn)
-            myconn.close()
-        except Exception as e:
-            print(e)
-            print(f"{ip} is not reachable")
-            return
+                else:
+                    oui = MacLookup().lookup(mac)
+                    hop_info[ip]["router"]["oui"] = oui
+                    if hop_info[ip]["router"]["oui"] == "eero inc.":
+                        url, serial = EeroTests.search_by_mac(mac=mac)
+                        # print(url)
+                        # print(serial)
+                        if url != "Missing Network" and serial != "Missing Serial":
+
+                            hop_info[ip]["router"]["url"] = url
+                            hop_info[ip]["router"]["serial"] = serial
+                            hop_info[ip]["router"]["results"] = \
+                                asyncio.run(EeroTests.single_eero_results(customer_id=url))
+                        else:
+                            hop_info[ip]["router"]["url"] = "N/A"
+                            hop_info[ip]["router"]["serial"] = "N/A"
+                            hop_info[ip]["router"]["results"] = "N/A"
+                    else:
+                        hop_info[ip]["router"]["url"] = "N/A"
+                        hop_info[ip]["router"]["serial"] = "N/A"
+                        hop_info[ip]["router"]["results"] = "N/A"
+                hop_info[ip]["version"] = get_version(myconn)
+                myconn.close()
+                break
+            except Exception as e:
+                print(e)
+                print(f"{ip} was not reachable... retrying...")
+                continue
 
     threads = []
     for ip in ip_list:
@@ -410,12 +423,16 @@ def path_check():
 
         # sec_key = '/mycert.ppk'
 
-
-        myconn = paramiko.SSHClient()
-        myconn.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        print(f"Running traceroute to {target_ip}")
-        ip_list = []
-        traceroute_hops = traceroute(target_ip)
+        try:
+            myconn = paramiko.SSHClient()
+            myconn.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            print(f"Running traceroute to {target_ip}")
+            ip_list = []
+            traceroute_hops = traceroute(target_ip)
+        except Exception as e:
+            print(f"\n{e}\n")
+            print(f"Traceroute to {target_ip} failed.\n")
+            return
         hop_info = {}
         routers = {}
         print(f"Formatting traceroute output for {target_ip}")
@@ -423,7 +440,21 @@ def path_check():
         ip_list = ip_format(ip_list, prefix)
         # print(ip_list)
         print(f"Gathering information for hops in traceroute to {target_ip}")
-        gather_route(traceroute_hops, prefix, myconn, ip_list, hop_info, routers)
+        i = 1
+        while True:
+            try:
+                gather_route(traceroute_hops, prefix, myconn, ip_list, hop_info, routers)
+                break
+            except Exception as e:
+                print(f"\n{e}\n")
+                print(f"Gathering information for hops in traceroute to {target_ip} failed.\n")
+                i += 1
+                if i <= 5:
+                    print(f"Retrying...\n")
+                    continue
+                else:
+                    print(f"Unable to reach {target_ip}.\n, check your connection and try again.")
+                    return 1
         # print(ip_list)
 
 
@@ -577,20 +608,24 @@ def main():
                                 break
                             mac = get_mac(None, ip)
                             # print(f"\n\tRouter MAC = {mac}")
-                            oui = MacLookup().lookup(mac)
-                            # print(f"\tOUI = {oui}")
-                            if oui == "eero inc.":
-                                url, serial = EeroTests.search_by_mac(base_url, headers, mac)
-                                if url == "Missing Network" or serial == "Missing Serial":
-                                    pass
-                                else:
-                                    url = f"https://dashboard.eero.com/networks/" \
-                                          f"{url}"
+                            if mac == '\'':
+                                table.add_row([ip, "None Found", "N/A", "N/A", "N/A"])
+                                print(table)
                             else:
-                                url = "N/A"
-                                serial = "N/A"
-                            table.add_row([ip, mac, oui, serial, url])
-                            print(table)
+                                oui = MacLookup().lookup(mac)
+                                # print(f"\tOUI = {oui}")
+                                if oui == "eero inc.":
+                                    url, serial = EeroTests.search_by_mac(mac=mac)
+                                    if url == "Missing Network" or serial == "Missing Serial":
+                                        pass
+                                    else:
+                                        url = f"https://dashboard.eero.com/networks/" \
+                                              f"{url}"
+                                else:
+                                    url = "N/A"
+                                    serial = "N/A"
+                                table.add_row([ip, mac, oui, serial, url])
+                                print(table)
                             # more = input("Eero test? (Y/n): ")
                             # if more == "Y" or more == "y":
                             #     EeroTests.eero_test(base_url, headers, ip)
