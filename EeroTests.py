@@ -127,7 +127,7 @@ def list_networks(base_url, headers, params=None):
     return result
 
 
-async def grab_eeros(base_url, headers):
+async def grab_eeros(base_url=base_url, headers=headers):
     network_list = []
     networks = list_networks(base_url, headers)
     # print(list_networks(base_url, headers)['data']['networks'])
@@ -190,7 +190,7 @@ async def grab_eeros(base_url, headers):
     return "That's all folks!"
 
 
-async def single_eero_results(base_url, headers, customer_id):
+async def single_eero_results(base_url=base_url, headers=headers, customer_id=None):
     # print("Grabbing Eero results for customer ID: {}".format(customer_id))
     tests = await speed_test_list(base_url, headers, customer_id)
     # print(f"Grabbed Eero result for customer ID: {customer_id}\t---\t{tests}")
@@ -203,7 +203,7 @@ async def single_eero_results(base_url, headers, customer_id):
     return table
 
 
-def search_by_mac(base_url, headers, mac=None):
+def search_by_mac(base_url=base_url, headers=headers, mac=None):
     if mac is None:
         # mac = input("Enter the MAC address of the router you want to search for: ")
         return "No MAC address entered"
@@ -339,8 +339,8 @@ def main():
             choice = int(input("Enter your choice: "))
             if choice == 1:
                 print("Grabbing New Eero List")
-                result = asyncio.run(grab_eeros(base_url, headers))
-                print(result)
+                asyncio.run(grab_eeros(base_url, headers))
+                print("\n")
             elif choice == 2:
                 choice = input("Not fully implemented yet... Continue? (y/n): ")
                 if choice == 'y':

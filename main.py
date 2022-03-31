@@ -482,7 +482,7 @@ def path_check():
                         mac = hop_info[hop]['router']['mac']
                         oui = hop_info[hop]['router']['oui']
                         if oui == "eero inc.":
-                            url, serial = EeroTests.search_by_mac(base_url, headers, mac)
+                            url, serial = EeroTests.search_by_mac(mac=mac)
                             if url == "Missing Network" or serial == "Missing Serial":
                                 pass
                             else:
@@ -539,8 +539,6 @@ def path_check():
 
 
 def main():
-    # import auto_updater
-    # auto_updater.main()
 
     try:
         with open("routers.json", "r") as f: # Check if routers.json exists and if date is older than 1 week
@@ -588,6 +586,7 @@ def main():
             print("1. Single Site Check")
             print("2. Path Check")
             print("3. Eero Check")
+            print("4. Check for program update")
             print("0. Exit")
             choice = int(input("Choice: "))
             if choice == 1:
@@ -647,6 +646,10 @@ def main():
                 path_check()
             elif choice == 3:
                 EeroTests.main()
+            elif choice == 4:
+                print("Almost there... Not quite ready yet.")
+                # import auto_updater
+                # auto_updater.main()
             elif choice == 0:
                 print("Exiting...")
                 break
