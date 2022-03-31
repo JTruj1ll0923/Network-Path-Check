@@ -67,7 +67,7 @@ def ip_check():
             target_ip = str(input("What is the target MBU IPv6? (0 to exit) "))
             # traceroute_start(target_ip, None, None)
             if target_ip == 0 or target_ip == "0":
-                return
+                return 0
             if ipaddress.IPv6Address(target_ip):
                 break
             else:
@@ -183,6 +183,7 @@ def get_address(myconn, ip=None, user="root", pswd="admin", port=22):
     out = out.split(".")[1]
     if out[len(out) - 1] == "\"":
         out = out[:-1]
+    out = f"\n\nAddress: {out}"
     return out
 
 
@@ -418,7 +419,7 @@ def route_tests(hop_info, target_ip, prefix, ip_list):
 def path_check():
     try:
         target_ip = ip_check()
-        if target_ip == 0:
+        if target_ip == 0 or target_ip == '0':
             return
         prefix = str(target_ip.split(":")[0] + ":" + target_ip.split(":")[1])
         # print(prefix)
@@ -475,8 +476,11 @@ def path_check():
                 choice = int(input("Choice: "))
                 if choice == 1:
                     print("\n\n")
+                    i = 1
+                    table = PrettyTable(["Hop", "IP"])
                     for ip in hop_info:
-                        print(ip)
+                        table.add_row([i, ip])
+                        i += 1
                 elif choice == 2:
                     print("\n\n")
                     table = PrettyTable(["IP", "MAC", "OUI", "Serial", "URL"])
@@ -545,7 +549,7 @@ def main():
     try:
         with open("routers.json", "r") as f: # Check if routers.json exists and if date is older than 1 week
             routers = json.load(f)
-            time = routers['date']['0']
+            time = routers['date']
             time = time.format("%Y-%m-%d_%H:%M:%S")
             time = arrow.get(time, "YYYY-MM-DD_HH:mm:ss")
             # time = time - datetime.timedelta(days=6)
@@ -582,7 +586,12 @@ def main():
                 continue
     #     # print("-------------------------------------------------------")
     #     # print("")
+    first_run = True
     while True:
+        if not first_run:
+            print("\n\n")
+        else:
+            first_run = False
         try:
             print("What would you like to do?")
             print("1. Single Site Check")

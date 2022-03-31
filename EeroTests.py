@@ -132,7 +132,7 @@ async def grab_eeros(base_url=base_url, headers=headers):
     networks = list_networks(base_url, headers)
     # print(list_networks(base_url, headers)['data']['networks'])
     i = 1
-    print("Grabbing network page", end=": ")
+    print("Grabbing network page", end=":\n")
     while True:
         if i % 10 == 0:
             print("\n")
@@ -186,7 +186,10 @@ async def grab_eeros(base_url=base_url, headers=headers):
     # df.to_csv('networks.xlsx', index=False)
     df = pd.DataFrame.from_dict(router_dict, orient='index')
     # df.to_csv('routers.xlsx', index=False)
-    df.to_json('routers.json', orient='index')
+    routers = open('routers.json', 'w')
+    routers.write(json.dumps(router_dict))
+    routers.close()
+    # df.to_json('routers.json', orient='index')
     return "That's all folks!"
 
 
@@ -212,12 +215,12 @@ def search_by_mac(base_url=base_url, headers=headers, mac=None):
     try:
         with open('routers.json') as json_file:
             data = json.load(json_file)
-            id = data[mac]["0"]['url']
+            id = data[mac]['url']
             # print(data)
             id = id.split('/')
             id = id[len(id) - 1]
             # print(mac)
-            serial = data[mac]["0"]['serial']
+            serial = data[mac]['serial']
             # print(serial)
             # data = f"https://dashboard.eero.com/networks/{data}"
         json_file.close()
