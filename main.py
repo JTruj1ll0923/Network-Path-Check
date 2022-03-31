@@ -511,19 +511,44 @@ def main():
     # import auto_updater
     # auto_updater.main()
 
-    # try:
-    #     # with open("routers.json", "r") as f: # Check if routers.json exists and if date is older than 1 week
-    #     #     routers = json.load(f)
-    #     #     if arrow.now().format("YYYY-MM-DD")!= routers['last_update']:
-    # except FileNotFoundError:
-    #     print("No router list found. Create new list?")
-    #     choice = input("(Y/n): ")
-    #     if choice == "Y" or choice == "y":
-    #         print("Creating new router list...")
-    #         EeroTests.grab_eeros(base_url, headers)
-    #         print("Done!")
-    #     else:
-    #         print("Starting program without router list...")
+    try:
+        with open("routers.json", "r") as f: # Check if routers.json exists and if date is older than 1 week
+            routers = json.load(f)
+            time = routers['date']['0']
+            time = time.format("%Y-%m-%d_%H:%M:%S")
+            time = arrow.get(time, "YYYY-MM-DD_HH:mm:ss")
+            # time = time - datetime.timedelta(days=6)
+            # print(time)
+            # print(time.humanize())
+            # if time.humanize(routers['date']) > "1 week":
+            if time <= arrow.now() - datetime.timedelta(days=1):
+                choice = input("Your router list is older than 1 day. Would you like to update? (Y/n)")
+                # choice = input("Choice: ")
+                if choice == "N" or choice == "n":
+                    print("Using old router list...")
+                else:
+                    print("Updating router list...")
+                    result = asyncio.run(EeroTests.grab_eeros())
+                    print(result)
+            else:
+                pass
+
+            # if arrow.now().format("YYYY-MM-DD")!= routers['date']['0']:
+    except FileNotFoundError:
+        print("No router list found. Create new list?")
+        while True:
+            choice = input("(y/n): ")
+            if choice == "Y" or choice == "y":
+                print("Creating new router list...")
+                asyncio.run(EeroTests.grab_eeros())
+                print("Done!")
+                break
+            elif choice == "n" or choice == "N":
+                print("Starting program without router list...")
+                break
+            else:
+                print("Invalid Choice")
+                continue
     #     # print("-------------------------------------------------------")
     #     # print("")
     while True:
