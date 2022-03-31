@@ -131,7 +131,13 @@ async def grab_eeros(base_url, headers):
     network_list = []
     networks = list_networks(base_url, headers)
     # print(list_networks(base_url, headers)['data']['networks'])
+    i = 1
+    print("Grabbing network page", end=": ")
     while True:
+        if i % 10 == 0:
+            print("\n")
+        print(f"{i}", end="...")
+        i += 1
         for network in networks['data']['networks']:
             network_list.append(network)
         try:
@@ -141,7 +147,7 @@ async def grab_eeros(base_url, headers):
                 offset = offset.split('=')[1]
                 networks = list_networks(base_url, headers, params={"offset": offset})
             else:
-                print("That's all folks!")
+                # print("That's all folks!")
                 break
         except KeyError:
             print("That's all folks!")
@@ -176,11 +182,12 @@ async def grab_eeros(base_url, headers):
             }
         i += 1
 
-    df = pd.DataFrame.from_dict(network_dict, orient='index')
-    df.to_csv('networks.xlsx', index=False)
+    # df = pd.DataFrame.from_dict(network_dict, orient='index')
+    # df.to_csv('networks.xlsx', index=False)
     df = pd.DataFrame.from_dict(router_dict, orient='index')
-    df.to_csv('routers.xlsx', index=False)
+    # df.to_csv('routers.xlsx', index=False)
     df.to_json('routers.json', orient='index')
+    return "That's all folks!"
 
 
 async def single_eero_results(base_url, headers, customer_id):
