@@ -402,7 +402,9 @@ def route_tests(hop_info, target_ip, prefix, ip_list):
     for ip in ip_list:
         try:
             if hop_info[ip]['router']['oui'] == "eero inc.":
-                print(f"{i} -- {hop_info[ip]['address']}\n{hop_info[ip]['router']['results']}")
+                print(f"{i} -- {hop_info[ip]['address']} -- "
+                      f"https://dashboard.eero.com/networks/{hop_info[ip]['router']['url']}\n"
+                      f"{hop_info[ip]['router']['results']}")
                 i += 1
             else:
                 print(f"{i} -- {hop_info[ip]['address']} does not have an Eero. No tests available.")
@@ -460,7 +462,7 @@ def path_check():
 
         while True:
             try:
-                # print("\n\n")
+                print("\n")
                 print("What would you like to do?")
                 print("1. Print all IPs")
                 print("2. Print all Routers")
@@ -630,10 +632,10 @@ def main():
                             #     EeroTests.eero_test(base_url, headers, ip)
                         elif choice == 2:
                             # print("\n\n")
-                            ip = input("IPv6: ")
+                            ip = ip_check()
                             print(ptmp_check(None, ip))
                         elif choice == 3:
-                            ip = input("IPv6: ")
+                            ip = ip_check()
                             print(get_address(None, ip))
                         elif choice == 0:
                             print("Exiting...")
@@ -643,7 +645,7 @@ def main():
                     except:
                         continue
             elif choice == 2:
-                path_check()
+                result = path_check()
             elif choice == 3:
                 EeroTests.main()
             elif choice == 4:

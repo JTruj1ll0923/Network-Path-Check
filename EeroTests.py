@@ -88,7 +88,7 @@ def format_tests(tests):
         date = test['date']
         date = arrow.get(date)
         try:
-            date = date.to('US/Mountain')
+            date = date - datetime.timedelta(hours=7)
         except Exception as e:
             print(f"{e} -- Unable to convert time")
         test_results[i]['date'] = date
