@@ -7,18 +7,63 @@ import pandas as pd
 import openpyxl
 import datetime
 import arrow
+import sys
 
-secret_file = open('secrets.json', 'r')
-secrets = json.load(secret_file)
-secret_file.close()
-base_url = "https://api-user.e2ro.com/2.2"
-user_token = secrets['user_token']
-headers = {
-    "Content-Type": "application/json",
-    "X-Lang": "en-US",
-    "User-Agent": "WeLink/0.1",
-    "X-User-Token": user_token
-}
+try:
+    secret_file = open('secrets.json', 'r')
+    secrets = json.load(secret_file)
+    secret_file.close()
+    base_url = "https://api-user.e2ro.com/2.2"
+    user_token = secrets['user_token']
+    headers = {
+        "Content-Type": "application/json",
+        "X-Lang": "en-US",
+        "User-Agent": "WeLink/0.1",
+        "X-User-Token": user_token
+    }
+except Exception as e:
+    print("Could not load secrets.json for API key")
+    user_token = None
+    while True:
+        c = input("Would you like to enter your credentials manually? (y/n)")
+        if c == 'y' or c == 'Y':
+            user_token = input("Enter your user token: ")
+            # print("Would you like to save this token to secrets.json? (y/n)")
+            while True:
+                c = input("Would you like to save this token to secrets.json? (y/n)")
+                if c == 'y' or c == 'Y':
+                    try:
+                        secret_file = open('secrets.json', 'w')
+                        json.dump({"user_token": user_token}, secret_file)
+                        secret_file.close()
+                        print("Saved!")
+                        break
+                    except Exception as e:
+                        print("Could not save to secrets.json")
+                        break
+                elif c == 'n' or c == 'N':
+                    print("Continuing without saving")
+                    break
+                else:
+                    print("Invalid input")
+            # with open('secrets.json', 'w') as outfile:
+            #     json.dump({'user_token': user_token}, outfile)
+            break
+        elif c == 'n' or c == 'N':
+            print("Press any key to exit")
+            input()
+            sys.exit()
+        else:
+            print("Invalid input")
+            continue
+    headers = {
+        "Content-Type": "application/json",
+        "X-Lang": "en-US",
+        "User-Agent": "WeLink/0.1",
+        "X-User-Token": user_token
+    }
+    base_url = "https://api-user.e2ro.com/2.2"
+    # sys.exit(1)
 
 
 def slow_day_report(base_url, headers):

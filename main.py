@@ -25,18 +25,39 @@ import EeroTests
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-
-secret_file = open('secrets.json', 'r')
-secrets = json.load(secret_file)
-secret_file.close()
-base_url = "https://api-user.e2ro.com/2.2"
-user_token = secrets['user_token']
-headers = {
-    "Content-Type": "application/json",
-    "X-Lang": "en-US",
-    "User-Agent": "WeLink/0.1",
-    "X-User-Token": user_token
-}
+# try:
+#     secret_file = open('secrets.json', 'r')
+#     secrets = json.load(secret_file)
+#     secret_file.close()
+#     base_url = "https://api-user.e2ro.com/2.2"
+#     user_token = secrets['user_token']
+#     headers = {
+#         "Content-Type": "application/json",
+#         "X-Lang": "en-US",
+#         "User-Agent": "WeLink/0.1",
+#         "X-User-Token": user_token
+#     }
+# except Exception as e:
+#     print("Could not load secrets.json")
+#     while True:
+#         c = input("Would you like to enter your credentials manually? (y/n)")
+#         if c == 'y' or c == 'Y':
+#             user_token = input("Enter your user token: ")
+#             headers = {
+#                 "Content-Type": "application/json",
+#                 "X-Lang": "en-US",
+#                 "User-Agent": "WeLink/0.1",
+#                 "X-User-Token": user_token
+#             }
+#             base_url = "https://api-user.e2ro.com/2.2"
+#             break
+#         elif c == 'n' or c == 'N':
+#             print("Press any key to exit")
+#             input()
+#             sys.exit()
+#     logger.error("Could not load secrets.json")
+#     logger.error(e)
+#     sys.exit(1)
 
 
 def ip_check():
