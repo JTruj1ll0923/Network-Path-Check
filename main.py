@@ -609,7 +609,8 @@ def main():
     try:
         with open("routers.json", "r") as f: # Check if routers.json exists and if date is older than 1 week
             routers = json.load(f)
-            time = routers['date']
+            time = str(routers['date'])
+            # print(time)
             time = time.format("%Y-%m-%d_%H:%M:%S")
             time = arrow.get(time, "YYYY-MM-DD_HH:mm:ss")
             # time = time - datetime.timedelta(days=6)
@@ -646,6 +647,10 @@ def main():
                 continue
     #     # print("-------------------------------------------------------")
     #     # print("")
+    except Exception as e:
+        print(f"Fatal Error with Checking for routers.json. Please delete routers.json and restart-----Exiting...")
+        input("Press Enter to continue...")
+        sys.exit(102)
     first_run = True
     while True:
         if not first_run:
