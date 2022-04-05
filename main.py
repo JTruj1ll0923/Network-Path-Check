@@ -183,7 +183,7 @@ def get_address(myconn, ip=None, user="root", pswd="admin", port=22):
     out = out.split(".")[1]
     if out[len(out) - 1] == "\"":
         out = out[:-1]
-    out = f"\n\nAddress: {out}"
+    # out = f"\n\nAddress: {out}"
     return out
 
 
