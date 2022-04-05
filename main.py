@@ -548,6 +548,62 @@ def path_check(ip=None):
         print("Exiting...")
 
 
+def single_site_check():
+    while True:
+        try:
+            # target_ip = ip_check()
+            print("\n\n")
+            print("What would you like to do?")
+            print("1. MAC Lookup")
+            print("2. PTMP Check")
+            print("3. Address Lookup")
+            print("0. Exit")
+            choice = int(input("Choice: "))
+            if choice == 1:
+                # print("\n\n")
+                table = PrettyTable(["IP", "MAC", "OUI", "Serial", "URL"])
+                ip = ip_check()
+                if ip == 0:
+                    break
+                mac = get_mac(None, ip)
+                # print(f"\n\tRouter MAC = {mac}")
+                if mac == '\'':
+                    table.add_row([ip, "None Found", "N/A", "N/A", "N/A"])
+                    print(table)
+                else:
+                    oui = MacLookup().lookup(mac)
+                    # print(f"\tOUI = {oui}")
+                    if oui == "eero inc.":
+                        url, serial = EeroTests.search_by_mac(mac=mac)
+                        if url == "Missing Network" or serial == "Missing Serial":
+                            pass
+                        else:
+                            url = f"https://dashboard.eero.com/networks/" \
+                                  f"{url}"
+                    else:
+                        url = "N/A"
+                        serial = "N/A"
+                    table.add_row([ip, mac, oui, serial, url])
+                    print(table)
+                # more = input("Eero test? (Y/n): ")
+                # if more == "Y" or more == "y":
+                #     EeroTests.eero_test(base_url, headers, ip)
+            elif choice == 2:
+                # print("\n\n")
+                ip = ip_check()
+                print(ptmp_check(None, ip))
+            elif choice == 3:
+                ip = ip_check()
+                print(f"\n\nAddress = {get_address(None, ip)}")
+            elif choice == 0:
+                print("Exiting...")
+                break
+            else:
+                print("Invalid Choice")
+        except:
+            continue
+
+
 def main():
 
     try:
@@ -605,58 +661,7 @@ def main():
             print("0. Exit")
             choice = int(input("Choice: "))
             if choice == 1:
-                while True:
-                    try:
-                        print("\n\n")
-                        print("What would you like to do?")
-                        print("1. MAC Lookup")
-                        print("2. PTMP Check")
-                        print("3. Address Lookup")
-                        print("0. Exit")
-                        choice = int(input("Choice: "))
-                        if choice == 1:
-                            # print("\n\n")
-                            table = PrettyTable(["IP", "MAC", "OUI", "Serial", "URL"])
-                            ip = ip_check()
-                            if ip == 0:
-                                break
-                            mac = get_mac(None, ip)
-                            # print(f"\n\tRouter MAC = {mac}")
-                            if mac == '\'':
-                                table.add_row([ip, "None Found", "N/A", "N/A", "N/A"])
-                                print(table)
-                            else:
-                                oui = MacLookup().lookup(mac)
-                                # print(f"\tOUI = {oui}")
-                                if oui == "eero inc.":
-                                    url, serial = EeroTests.search_by_mac(mac=mac)
-                                    if url == "Missing Network" or serial == "Missing Serial":
-                                        pass
-                                    else:
-                                        url = f"https://dashboard.eero.com/networks/" \
-                                              f"{url}"
-                                else:
-                                    url = "N/A"
-                                    serial = "N/A"
-                                table.add_row([ip, mac, oui, serial, url])
-                                print(table)
-                            # more = input("Eero test? (Y/n): ")
-                            # if more == "Y" or more == "y":
-                            #     EeroTests.eero_test(base_url, headers, ip)
-                        elif choice == 2:
-                            # print("\n\n")
-                            ip = ip_check()
-                            print(ptmp_check(None, ip))
-                        elif choice == 3:
-                            ip = ip_check()
-                            print(get_address(None, ip))
-                        elif choice == 0:
-                            print("Exiting...")
-                            break
-                        else:
-                            print("Invalid Choice")
-                    except:
-                        continue
+                single_site_check()
             elif choice == 2:
                 result = path_check()
             elif choice == 3:
