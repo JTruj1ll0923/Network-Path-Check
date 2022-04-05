@@ -417,9 +417,12 @@ def route_tests(hop_info, target_ip, prefix, ip_list):
             print(f"{ip} is not reachable")
 
 
-def path_check():
+def path_check(ip=None):
     try:
-        target_ip = ip_check()
+        if ip is not None:
+            target_ip = ip
+        else:
+            target_ip = ip_check()
         if target_ip == 0 or target_ip == '0':
             return
         prefix = str(target_ip.split(":")[0] + ":" + target_ip.split(":")[1])
