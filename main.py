@@ -124,7 +124,7 @@ def ptmp_check(myconn, ip=None, user="root", pswd="admin", port=22):
     # print(out)
     ptmp_list = []
     ptmp_table = PrettyTable(['IPv6', 'Eth Port', 'Address'])
-    if out == 0:
+    if out == 0 or out == "0":
         return "No PTMP"
     else:
         remote_cmd = 'grep -i -B 2 ptmp /tmp/run/lldp_server.json | grep -io eth[0-4]'
