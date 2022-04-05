@@ -1,22 +1,14 @@
 import paramiko
-import asyncssh
-from icmplib import ping, multiping, traceroute, resolve
-from icmplib import async_ping, async_multiping, async_resolve
+from icmplib import traceroute
+from icmplib import async_multiping
 from mac_vendor_lookup import MacLookup
 import ipaddress
-import asyncio
-from aiotraceroute import aiotraceroute
-from prettytable import PrettyTable
 import threading
 import logging
 import sys
-import requests
 import asyncio
-import aiohttp
 import json
 from prettytable import PrettyTable
-import pandas as pd
-import openpyxl
 import datetime
 import arrow
 
@@ -25,43 +17,8 @@ import EeroTests
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-# try:
-#     secret_file = open('secrets.json', 'r')
-#     secrets = json.load(secret_file)
-#     secret_file.close()
-#     base_url = "https://api-user.e2ro.com/2.2"
-#     user_token = secrets['user_token']
-#     headers = {
-#         "Content-Type": "application/json",
-#         "X-Lang": "en-US",
-#         "User-Agent": "WeLink/0.1",
-#         "X-User-Token": user_token
-#     }
-# except Exception as e:
-#     print("Could not load secrets.json")
-#     while True:
-#         c = input("Would you like to enter your credentials manually? (y/n)")
-#         if c == 'y' or c == 'Y':
-#             user_token = input("Enter your user token: ")
-#             headers = {
-#                 "Content-Type": "application/json",
-#                 "X-Lang": "en-US",
-#                 "User-Agent": "WeLink/0.1",
-#                 "X-User-Token": user_token
-#             }
-#             base_url = "https://api-user.e2ro.com/2.2"
-#             break
-#         elif c == 'n' or c == 'N':
-#             print("Press any key to exit")
-#             input()
-#             sys.exit()
-#     logger.error("Could not load secrets.json")
-#     logger.error(e)
-#     sys.exit(1)
-
 
 def ip_check():
-    target_ip = ""
     while True:
         try:
             target_ip = str(input("What is the target MBU IPv6? (0 to exit) ")).strip()
@@ -74,18 +31,8 @@ def ip_check():
                 print("Invalid IPv6")
                 continue
         except ValueError:
-            # print(ValueError)
             print("Invalid IPv6")
     return target_ip
-
-
-async def quick_traceroute(target_ip, prefix=None, ip_list=None):
-    async for n, addr, host in aiotraceroute(target_ip):
-        print(n, addr, host)
-
-
-def traceroute_start(target_ip, prefix, ip_list):
-    asyncio.get_event_loop().run_until_complete(quick_traceroute("google.com"))
 
 
 def hop_to_ip(hops, prefix):
@@ -97,7 +44,7 @@ def hop_to_ip(hops, prefix):
     return ip_list
 
 
-def ip_format(imported_ip_list, prefix):
+def ip_format(imported_ip_list):
     ip_list = imported_ip_list
     formatted_ip_list = []
     for ip in ip_list:
@@ -107,7 +54,6 @@ def ip_format(imported_ip_list, prefix):
             ip_split[len(ip_split) - 3] = ip_split[len(ip_split) - 3][:-2] + "00"
 
         formatted_ip_list.append(":".join(ip_split))
-        # print(ip_split[len(ip_split) - 3][:-2] + "00")
     return formatted_ip_list
 
 
@@ -115,14 +61,11 @@ def ptmp_check(myconn, ip=None, user="root", pswd="admin", port=22):
     if myconn is None:
         myconn = paramiko.SSHClient()
         myconn.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        session = myconn.connect(ip, username=user, password=pswd, port=port)
-    # target_address = get_address(None, ip)
+        myconn.connect(ip, username=user, password=pswd, port=port)
     remote_cmd = 'grep -B 2 -ci ptmp /tmp/run/lldp_server.json'
     stdin, stdout, stderr = myconn.exec_command(remote_cmd)
     out = "{}".format(stdout.read())
     out = out[2:-3]
-    # print(out)
-    ptmp_list = []
     ptmp_table = PrettyTable(['IPv6', 'Eth Port', 'Address'])
     if out == 0 or out == "0":
         return "No PTMP"
@@ -131,10 +74,8 @@ def ptmp_check(myconn, ip=None, user="root", pswd="admin", port=22):
 
         stdin, stdout, stderr = myconn.exec_command(remote_cmd)
         out = "{}".format(stdout.read())
-        # print(out)
         out = out[2:-3]
-        out = out.split("\\n") # We now have ethernet ports
-        # print(out)
+        out = out.split("\\n")  # We now have ethernet ports
 
         eths = {}
         ips = []
@@ -143,8 +84,7 @@ def ptmp_check(myconn, ip=None, user="root", pswd="admin", port=22):
             stdin, stdout, stderr = myconn.exec_command(remote_cmd)
             output = "{}".format(stdout.read())
             output = output[2:-3]
-            # print(output)
-            output = output.split("\\n") # We now have IPv6 addresses
+            output = output.split("\\n")  # We now have IPv6 addresses
 
             for ip in output:
                 new_ip = ip.split(" ")[0]
@@ -161,7 +101,7 @@ def get_mac(myconn, ip=None, user="root", pswd="admin", port=22):
     if myconn is None:
         myconn = paramiko.SSHClient()
         myconn.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        session = myconn.connect(ip, username=user, password=pswd, port=port)
+        myconn.connect(ip, username=user, password=pswd, port=port)
     remote_cmd = 'bridge fdb show | grep -iE \"dev (ghn0|eth[0-4]) master br\" | grep -v \"c4:93:00\"'
     (stdin, stdout, stderr) = myconn.exec_command(remote_cmd)
     out = "{}".format(stdout.read())
@@ -173,7 +113,7 @@ def get_address(myconn, ip=None, user="root", pswd="admin", port=22):
     if myconn is None:
         myconn = paramiko.SSHClient()
         myconn.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        session = myconn.connect(ip, username=user, password=pswd, port=port)
+        myconn.connect(ip, username=user, password=pswd, port=port)
     remote_cmd = 'grep hostname /tmp/config.json'
     (stdin, stdout, stderr) = myconn.exec_command(remote_cmd)
     out = "{}".format(stdout.read())
@@ -183,25 +123,10 @@ def get_address(myconn, ip=None, user="root", pswd="admin", port=22):
     out = out.split(".")[1]
     if out[len(out) - 1] == "\"":
         out = out[:-1]
-    # out = f"\n\nAddress: {out}"
     return out
 
 
-def get_tasks():
-    tasks = []
-
-    """
-    for var in variables:
-        # print(f"Var: {var}")
-        # print(f"Grabbing extras")
-        tasks.append(asyncio.create_task(async_test_maker(session, query, var, failed_list)))
-        # tasks.append(asyncio.create_task(session.execute(query, var)))
-        # tasks.append(asyncio.create_task(asyncio.sleep(0.5)))
-    return tasks
-    """
-
-
-async def async_mtr(ips, hop_info, target_ip, prefix):
+async def async_mtr(ips, hop_info):
     mtr_results = {}
     for ip in ips:
         mtr_results[ip] = {}
@@ -226,7 +151,6 @@ async def async_mtr(ips, hop_info, target_ip, prefix):
         mtr_results[ip]['jitter'] = 0
 
     pingnum = 1
-    # while pingnum <= total_pings:
     while True:
         try:
             if pingnum > total_pings:
@@ -235,7 +159,8 @@ async def async_mtr(ips, hop_info, target_ip, prefix):
             # print(route_change_check(target_ip, prefix, ips, hop_info))
             response = await async_multiping(ips, count=1)
             print(f"\n\n\n\n\n\n\n\n\n\n")
-            mtr_table = PrettyTable(['IP', 'Address', 'RTT', 'Packets Sent', 'Packets Received', 'Packet Loss', 'Jitter'])
+            mtr_table = PrettyTable(['IP', 'Address', 'RTT', 'Packets Sent',
+                                     'Packets Received', 'Packet Loss', 'Jitter'])
             for host in response:
                 ip = host.address
                 mtr_results[ip]['address'] = hop_info[ip]['address']
@@ -255,8 +180,8 @@ async def async_mtr(ips, hop_info, target_ip, prefix):
             print("\n\n\t\tFinished MTR\n\n")
 
 
-def mtr(ips, hop_info, target_ip, prefix):
-    asyncio.run(async_mtr(ips, hop_info, target_ip, prefix))
+def mtr(ips, hop_info):
+    asyncio.run(async_mtr(ips, hop_info))
 
 
 def get_version(myconn):
@@ -265,14 +190,10 @@ def get_version(myconn):
     (stdin, stdout, stderr) = myconn.exec_command(remote_cmd)
     version = "{}".format(stdout.read())
     version = version[2:-3]
-    # print(out)
-    # print("{}".format(type(myconn)))
-    # print("Options available to deal with the connectios are many like\n{}".format(dir(myconn)))
-    #     myconn.close()
     return version
 
 
-def route_print(hop_info, routers):
+def route_print(hop_info):
     j = 1
     for ip in hop_info:
         print(f"Hop {j} = {ip}\n"
@@ -285,57 +206,55 @@ def route_print(hop_info, routers):
         j += 1
 
 
-def gather_route(traceroute_hops, prefix, myconn, ip_list,
-                 hop_info=None, routers=None, user="root", pswd="admin", port=22):
-    if routers is None:
-        routers = {}
+def gather_route(myconn, ip_list,
+                 hop_info=None, user="root", pswd="admin", port=22):
     if hop_info is None:
         hop_info = {}
     if ip_list is None:
         ip_list = []
     i = 1
 
-    def go_check(ip):
+    def go_check(target_ip):
         while True:
             try:
-                myconn.connect(ip, username=user, password=pswd, port=port)
-                hop_info[ip] = {}
-                hop_info[ip]["address"] = get_address(myconn)
-                hop_info[ip]["router"] = {}
+                myconn.connect(target_ip, username=user, password=pswd, port=port)
+                hop_info[target_ip] = {}
+                hop_info[target_ip]["address"] = get_address(myconn)
+                hop_info[target_ip]["router"] = {}
                 mac = str(get_mac(myconn))
-                hop_info[ip]["router"]["mac"] = mac
+                hop_info[target_ip]["router"]["mac"] = mac
                 # print(mac)
                 if mac == "\'":
-                    hop_info[ip]["router"]["mac"] = "N/A"
-                    hop_info[ip]["router"]["oui"] = "N/A"
-                    hop_info[ip]["router"]["url"] = "N/A"
+                    hop_info[target_ip]["router"]["mac"] = "N/A"
+                    hop_info[target_ip]["router"]["oui"] = "N/A"
+                    hop_info[target_ip]["router"]["url"] = "N/A"
                 else:
                     oui = MacLookup().lookup(mac)
-                    hop_info[ip]["router"]["oui"] = oui
-                    if hop_info[ip]["router"]["oui"] == "eero inc.":
+                    hop_info[target_ip]["router"]["oui"] = oui
+                    if hop_info[target_ip]["router"]["oui"] == "eero inc.":
                         url, serial = EeroTests.search_by_mac(mac=mac)
                         # print(url)
                         # print(serial)
                         if url != "Missing Network" and serial != "Missing Serial":
 
-                            hop_info[ip]["router"]["url"] = url
-                            hop_info[ip]["router"]["serial"] = serial
-                            hop_info[ip]["router"]["results"] = \
+                            hop_info[target_ip]["router"]["url"] = url
+                            hop_info[target_ip]["router"]["serial"] = serial
+                            hop_info[target_ip]["router"]["results"] = \
                                 asyncio.run(EeroTests.single_eero_results(customer_id=url))
                         else:
-                            hop_info[ip]["router"]["url"] = "N/A"
-                            hop_info[ip]["router"]["serial"] = "N/A"
-                            hop_info[ip]["router"]["results"] = "N/A"
+                            hop_info[target_ip]["router"]["url"] = "N/A"
+                            hop_info[target_ip]["router"]["serial"] = "N/A"
+                            hop_info[target_ip]["router"]["results"] = "N/A"
                     else:
-                        hop_info[ip]["router"]["url"] = "N/A"
-                        hop_info[ip]["router"]["serial"] = "N/A"
-                        hop_info[ip]["router"]["results"] = "N/A"
-                hop_info[ip]["version"] = get_version(myconn)
+                        hop_info[target_ip]["router"]["url"] = "N/A"
+                        hop_info[target_ip]["router"]["serial"] = "N/A"
+                        hop_info[target_ip]["router"]["results"] = "N/A"
+                hop_info[target_ip]["version"] = get_version(myconn)
                 myconn.close()
                 break
-            except Exception as e:
-                print(e)
-                print(f"{ip} was not reachable... retrying...")
+            except Exception as err:
+                print(err)
+                print(f"{target_ip} was not reachable... retrying...")
                 continue
 
     threads = []
@@ -348,20 +267,14 @@ def gather_route(traceroute_hops, prefix, myconn, ip_list,
             return "Error"
         i += 1
     for thread in threads:
-        # print(thread)
         thread.start()
-        # print(thread)
         thread.join()
-        # print(thread)
-
 
 
 def route_change_check(target_ip, prefix, ip_list, hop_info):
     new_traceroute = traceroute(target_ip)
     new_ip_list = hop_to_ip(new_traceroute, prefix)
-    # print(new_ip_list)
-    new_ip_list = ip_format(new_ip_list, prefix)
-    # print(new_ip_list)
+    new_ip_list = ip_format(new_ip_list)
     route_change = PrettyTable(["Hop Number", "Original Route", "Original Address", "New Route", "New Address"])
     if new_ip_list != ip_list:
         if len(new_ip_list) > len(ip_list):
@@ -398,7 +311,7 @@ def route_change_check(target_ip, prefix, ip_list, hop_info):
         return "No Route Change"
 
 
-def route_tests(hop_info, target_ip, prefix, ip_list):
+def route_tests(hop_info, ip_list):
     i = 1
     for ip in ip_list:
         try:
@@ -426,31 +339,25 @@ def path_check(ip=None):
         if target_ip == 0 or target_ip == '0':
             return
         prefix = str(target_ip.split(":")[0] + ":" + target_ip.split(":")[1])
-        # print(prefix)
-
-        # sec_key = '/mycert.ppk'
 
         try:
             myconn = paramiko.SSHClient()
             myconn.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             print(f"Running traceroute to {target_ip}")
-            ip_list = []
             traceroute_hops = traceroute(target_ip)
         except Exception as e:
             print(f"\n{e}\n")
             print(f"Traceroute to {target_ip} failed.\n")
             return
         hop_info = {}
-        routers = {}
         print(f"Formatting traceroute output for {target_ip}")
         ip_list = hop_to_ip(traceroute_hops, prefix)
-        ip_list = ip_format(ip_list, prefix)
-        # print(ip_list)
+        ip_list = ip_format(ip_list)
         print(f"Gathering information for hops in traceroute to {target_ip}")
         i = 1
         while True:
             try:
-                gather_route(traceroute_hops, prefix, myconn, ip_list, hop_info, routers)
+                gather_route(myconn, ip_list, hop_info)
                 break
             except Exception as e:
                 print(f"\n{e}\n")
@@ -462,8 +369,6 @@ def path_check(ip=None):
                 else:
                     print(f"Unable to reach {target_ip}.\n, check your connection and try again.")
                     return 1
-        # print(ip_list)
-
 
         while True:
             try:
@@ -511,14 +416,14 @@ def path_check(ip=None):
                         i += 1
                 elif choice == 4:
                     print("\n\n")
-                    mtr(ip_list, hop_info, target_ip, prefix)
+                    mtr(ip_list, hop_info)
                 elif choice == 5:
                     print("\n\n")
-                    route_print(hop_info, routers)
+                    route_print(hop_info)
                 elif choice == 6:
                     print(f"\n{route_change_check(target_ip, prefix, ip_list, hop_info)}")
                 elif choice == 7:
-                    route_tests(hop_info, target_ip, prefix, ip_list)
+                    route_tests(hop_info, ip_list)
                 elif choice == 0:
                     print("Exiting...")
                     break
@@ -570,15 +475,7 @@ def single_site_check():
                         serial = "N/A"
                     table.add_row([ip, mac, oui, serial, url])
                     print(table)
-                    # if oui == "eero inc.":
-                    #     more = input("Eero test? (y/N): ")
-                    #     if more == "Y" or more == "y":
-                    #         result = asyncio.run(EeroTests.single_eero_results(customer_id=customer_id))
-                    #         print(result)
-                    #     else:
-                    #         pass
             elif choice == 2:
-                # print("\n\n")
                 print(f"\n\n{ptmp_check(None, ip)}")
             elif choice == 3:
                 print(f"\n\nAddress = {get_address(None, ip)}")
@@ -595,25 +492,20 @@ def single_site_check():
                 break
             else:
                 print("Invalid Choice")
-        except:
+        except Exception as err:
+            logger.exception(err)
             continue
 
 
 def main():
     try:
-        with open("routers.json", "r") as f: # Check if routers.json exists and if date is older than 1 week
+        with open("routers.json", "r") as f:  # Check if routers.json exists and if date is older than 1 day
             routers = json.load(f)
             time = str(routers['date'])
-            # print(time)
             time = time.format("%Y-%m-%d_%H:%M:%S")
             time = arrow.get(time, "YYYY-MM-DD_HH:mm:ss")
-            # time = time - datetime.timedelta(days=6)
-            # print(time)
-            # print(time.humanize())
-            # if time.humanize(routers['date']) > "1 week":
             if time <= arrow.now() - datetime.timedelta(days=1):
                 choice = input("Your router list is older than 1 day. Would you like to update? (Y/n)")
-                # choice = input("Choice: ")
                 if choice == "N" or choice == "n":
                     print("Using old router list...")
                 else:
@@ -623,7 +515,6 @@ def main():
             else:
                 pass
 
-            # if arrow.now().format("YYYY-MM-DD")!= routers['date']['0']:
     except FileNotFoundError:
         print("No router list found. Create new list?")
         while True:
@@ -639,9 +530,8 @@ def main():
             else:
                 print("Invalid Choice")
                 continue
-    #     # print("-------------------------------------------------------")
-    #     # print("")
     except Exception as e:
+        print(f"\n\n\t{e}\n\n")
         print(f"Fatal Error with Checking for routers.json. Please delete routers.json and restart-----Exiting...")
         input("Press Enter to continue...")
         sys.exit(102)
@@ -662,7 +552,7 @@ def main():
             if choice == 1:
                 single_site_check()
             elif choice == 2:
-                result = path_check()
+                path_check()
             elif choice == 3:
                 EeroTests.main()
             elif choice == 4:
