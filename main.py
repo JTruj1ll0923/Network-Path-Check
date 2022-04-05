@@ -403,9 +403,10 @@ def route_tests(hop_info, target_ip, prefix, ip_list):
     for ip in ip_list:
         try:
             if hop_info[ip]['router']['oui'] == "eero inc.":
+                result = asyncio.run(EeroTests.single_eero_results(customer_id=hop_info[ip]['router']['url']))
                 print(f"{i} -- {hop_info[ip]['address']} -- "
                       f"https://dashboard.eero.com/networks/{hop_info[ip]['router']['url']}\n"
-                      f"{hop_info[ip]['router']['results']}")
+                      f"{result}")
                 i += 1
             else:
                 print(f"{i} -- {hop_info[ip]['address']} does not have an Eero. No tests available.")
