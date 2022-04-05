@@ -64,7 +64,7 @@ def ip_check():
     target_ip = ""
     while True:
         try:
-            target_ip = str(input("What is the target MBU IPv6? (0 to exit) "))
+            target_ip = str(input("What is the target MBU IPv6? (0 to exit) ")).strip()
             # traceroute_start(target_ip, None, None)
             if target_ip == 0 or target_ip == "0":
                 return 0
