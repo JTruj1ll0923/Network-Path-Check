@@ -526,23 +526,6 @@ def path_check(ip=None):
                     print("Invalid Choice")
             except ValueError:
                 print("Invalid Choice")
-    except KeyboardInterrupt:
-        while True:
-            try:
-                choice = "Y"
-                choice = input("Exiting...\tWould you like to restart? (Y/n): ")
-                try:
-                    if choice == "Y" or choice == "y":
-                        print("Restarting...")
-                        main()
-                    else:
-                        print("Exiting...")
-                        break
-                except Exception as e:
-                    print("Exiting...")
-                    break
-            except Exception as e:
-                continue
     except Exception as e:
         logger.exception(e)
         print("Exiting...")
@@ -550,6 +533,8 @@ def path_check(ip=None):
 
 def single_site_check():
     ip = ip_check()
+    if ip == 0 or ip == '0':
+        return 0
     mac = get_mac(None, ip)
     url, serial = EeroTests.search_by_mac(mac=mac)
     customer_id = url
