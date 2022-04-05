@@ -374,12 +374,12 @@ def route_change_check(target_ip, prefix, ip_list, hop_info):
                         route_change.add_row([i + 1, "", "", new_ip_list[i], get_address(None, new_ip_list[i])])
                     except Exception as e:
                         print(e)
-                        logger.exception()
+                        logger.exception(e)
                         print(f"{new_ip_list[i]} is not reachable")
                         return
                 except Exception as e:
                     print(e)
-                    logger.exception()
+                    logger.exception(e)
                     print(f"{new_ip_list[i]} is not reachable")
                     return
 
@@ -549,35 +549,35 @@ def path_check(ip=None):
 
 
 def single_site_check():
+    ip = ip_check()
+    mac = get_mac(None, ip)
+    url, serial = EeroTests.search_by_mac(mac=mac)
+    customer_id = url
     while True:
         try:
-            # target_ip = ip_check()
             print("\n\n")
             print("What would you like to do?")
             print("1. MAC Lookup")
             print("2. PTMP Check")
             print("3. Address Lookup")
+            print("4. Print Eero Tests")
+            print("5. Target Different Site")
             print("0. Exit")
             choice = int(input("Choice: "))
             if choice == 1:
-                # print("\n\n")
                 table = PrettyTable(["IP", "MAC", "OUI", "Serial", "URL"])
-                ip = ip_check()
-                if ip == 0:
-                    break
                 mac = get_mac(None, ip)
-                # print(f"\n\tRouter MAC = {mac}")
                 if mac == '\'':
                     table.add_row([ip, "None Found", "N/A", "N/A", "N/A"])
                     print(table)
                 else:
                     oui = MacLookup().lookup(mac)
-                    # print(f"\tOUI = {oui}")
                     if oui == "eero inc.":
                         url, serial = EeroTests.search_by_mac(mac=mac)
                         if url == "Missing Network" or serial == "Missing Serial":
                             pass
                         else:
+                            customer_id = url
                             url = f"https://dashboard.eero.com/networks/" \
                                   f"{url}"
                     else:
@@ -585,16 +585,26 @@ def single_site_check():
                         serial = "N/A"
                     table.add_row([ip, mac, oui, serial, url])
                     print(table)
-                # more = input("Eero test? (Y/n): ")
-                # if more == "Y" or more == "y":
-                #     EeroTests.eero_test(base_url, headers, ip)
+                    # if oui == "eero inc.":
+                    #     more = input("Eero test? (y/N): ")
+                    #     if more == "Y" or more == "y":
+                    #         result = asyncio.run(EeroTests.single_eero_results(customer_id=customer_id))
+                    #         print(result)
+                    #     else:
+                    #         pass
             elif choice == 2:
                 # print("\n\n")
-                ip = ip_check()
-                print(ptmp_check(None, ip))
+                print(f"\n{ptmp_check(None, ip)}")
             elif choice == 3:
-                ip = ip_check()
                 print(f"\n\nAddress = {get_address(None, ip)}")
+            elif choice == 4:
+                result = asyncio.run(EeroTests.single_eero_results(customer_id=customer_id))
+                print(result)
+            elif choice == 5:
+                ip = ip_check()
+                mac = get_mac(None, ip)
+                url, serial = EeroTests.search_by_mac(mac=mac)
+                customer_id = url
             elif choice == 0:
                 print("Exiting...")
                 break
