@@ -59,12 +59,21 @@ def ip_format(imported_ip_list):
     ip_list = imported_ip_list
     formatted_ip_list = []
     for ip in ip_list:
-        ip_split = ip.split(":")
+        ###
+        # We do not want to format leaf addresses, so we check if the ip ends in ::1 first
+        # If it does, we format
+        # If it does not, we skip
+        ###
+        test = ip[len(ip) - 3:]
+        if test == '::1':
+            ip_split = ip.split(":")
 
-        if len(ip_split[len(ip_split) - 3]) > 1:
-            ip_split[len(ip_split) - 3] = ip_split[len(ip_split) - 3][:-2] + "00"
+            if len(ip_split[len(ip_split) - 3]) > 1:
+                ip_split[len(ip_split) - 3] = ip_split[len(ip_split) - 3][:-2] + "00"
 
-        formatted_ip_list.append(":".join(ip_split))
+            formatted_ip_list.append(":".join(ip_split))
+        else:
+            formatted_ip_list.append(ip)
     return formatted_ip_list
 
 
