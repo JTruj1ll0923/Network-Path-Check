@@ -273,9 +273,13 @@ def gather_route(ip_list, hop_info=None, user="root", pswd="admin", port=22):
                 myconn.close()
                 break
             except Exception as err:
-                print(err)
-                print(f"{target_ip} was not reachable... retrying...")
-                continue
+                i += 1
+                if i > 5:
+                    print(f"\n\t{target_ip} is not responding.\n")
+                    break
+                else:
+                    print(f"\n\t{target_ip} is not responding. Trying again.\n")
+                    continue
 
     threads = []
     for ip in ip_list:
@@ -285,7 +289,6 @@ def gather_route(ip_list, hop_info=None, user="root", pswd="admin", port=22):
         except Exception as e:
             print(e)
             return "Error"
-        i += 1
     for thread in threads:
         thread.start()
         thread.join()
