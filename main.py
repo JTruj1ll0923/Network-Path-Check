@@ -260,16 +260,12 @@ def gather_route(ip_list, hop_info=None, user="root", pswd="admin", port=22):
 
                             hop_info[target_ip]["router"]["url"] = url
                             hop_info[target_ip]["router"]["serial"] = serial
-                            hop_info[target_ip]["router"]["results"] = \
-                                asyncio.run(EeroTests.single_eero_results(customer_id=url))
                         else:
                             hop_info[target_ip]["router"]["url"] = "N/A"
                             hop_info[target_ip]["router"]["serial"] = "N/A"
-                            hop_info[target_ip]["router"]["results"] = "N/A"
                     else:
                         hop_info[target_ip]["router"]["url"] = "N/A"
                         hop_info[target_ip]["router"]["serial"] = "N/A"
-                        hop_info[target_ip]["router"]["results"] = "N/A"
                 hop_info[target_ip]["version"] = get_version(myconn)
                 myconn.close()
                 break
