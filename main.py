@@ -205,8 +205,7 @@ def route_print(hop_info):
         j += 1
 
 
-def gather_route(myconn, ip_list,
-                 hop_info=None, user="root", pswd="admin", port=22):
+def gather_route(ip_list, hop_info=None, user="root", pswd="admin", port=22):
     if hop_info is None:
         hop_info = {}
     if ip_list is None:
@@ -216,6 +215,8 @@ def gather_route(myconn, ip_list,
     def go_check(target_ip):
         while True:
             try:
+                myconn = paramiko.SSHClient()
+                myconn.set_missing_host_key_policy(paramiko.AutoAddPolicy())
                 myconn.connect(target_ip, username=user, password=pswd, port=port)
                 hop_info[target_ip] = {}
                 hop_info[target_ip]["address"] = get_address(myconn)
@@ -340,8 +341,6 @@ def path_check(ip=None):
         prefix = str(target_ip.split(":")[0] + ":" + target_ip.split(":")[1])
 
         try:
-            myconn = paramiko.SSHClient()
-            myconn.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             print(f"Running traceroute to {target_ip}")
             traceroute_hops = traceroute(target_ip)
         except Exception as e:
@@ -356,7 +355,7 @@ def path_check(ip=None):
         i = 1
         while True:
             try:
-                gather_route(myconn, ip_list, hop_info)
+                gather_route(ip_list, hop_info)
                 break
             except Exception as e:
                 print(f"\n{e}\n")
