@@ -19,11 +19,11 @@ logger.setLevel(logging.DEBUG)
 
 
 def ip_check():  # Return string if IP is valid, else return 0
+    ###
+    # Get MBU IPv6 from user. Strip any whitespace and check if valid.
+    ###
     while True:
         try:
-            ###
-            # Get MBU IPv6 from user. Strip any whitespace and check if valid.
-            ###
             target_ip = str(input("What is the target MBU IPv6? (0 to exit) ")).strip()
             if target_ip == 0 or target_ip == "0":
                 return 0
@@ -38,6 +38,11 @@ def ip_check():  # Return string if IP is valid, else return 0
 
 
 def hop_to_ip(hops, prefix):
+    ###
+    # Remove any hops that are not in the WeLink network
+    # All hops in the WeLink network will have the same prefix as each other
+    # i.e. fd8d:xxxx:xxxx:xx00::1 fd8d could be the prefix and all hops will start with fd8d
+    ###
     ip_list = []
     for hop in hops:
         if prefix not in hop.address:
@@ -47,6 +52,10 @@ def hop_to_ip(hops, prefix):
 
 
 def ip_format(imported_ip_list):
+    ###
+    # The last 2 digits of the IPv6 before `::1` are the interface number
+    # To reach the MBU no matter what interface is up, we need to replace the last 2 digits with `00`
+    ###
     ip_list = imported_ip_list
     formatted_ip_list = []
     for ip in ip_list:
@@ -60,11 +69,15 @@ def ip_format(imported_ip_list):
 
 
 def ptmp_check(myconn, ip, user="root", pswd="admin", port=22):
+    ###
+    # Check if the target MBU has a PTMP radio and if so, get the IPv6 for it
+    # Also grab the leaf homes PTMP radio IPv6
+    ###
     if myconn is None:
         myconn = paramiko.SSHClient()
         myconn.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         myconn.connect(ip, username=user, password=pswd, port=port)
-    remote_cmd = 'grep -B 2 -ci ptmp /tmp/run/lldp_server.json'
+    remote_cmd = 'grep -B 2 -ci ptmp /tmp/run/lldp_server.json' # Check if PTMP radio is present
     stdin, stdout, stderr = myconn.exec_command(remote_cmd)
     out = "{}".format(stdout.read())
     out = out[2:-3]
@@ -74,17 +87,17 @@ def ptmp_check(myconn, ip, user="root", pswd="admin", port=22):
         myconn.close()
         return ptmp_table
     else:
-        remote_cmd = 'grep -i -B 2 ptmp /tmp/run/lldp_server.json | grep -io eth[0-4]'
+        remote_cmd = 'grep -i -B 2 ptmp /tmp/run/lldp_server.json | grep -io eth[0-4]'  # Get MBU Eths of PTMP radios
 
         stdin, stdout, stderr = myconn.exec_command(remote_cmd)
         out = "{}".format(stdout.read())
         out = out[2:-3]
-        out = out.split("\\n")  # We now have ethernet ports
+        out = out.split("\\n")  # We now have all MBU Eth ports
 
         eths = {}
         ips = []
         for eth in out:
-            remote_cmd = f'ip -6 neigh | grep -i \"{eth}\" | grep -v \"fe80\" | grep -i ll'
+            remote_cmd = f'ip -6 neigh | grep -i \"{eth}\" | grep -v \"fe80\" | grep -i ll'  # Get IPv6 of PTMP radios
             stdin, stdout, stderr = myconn.exec_command(remote_cmd)
             output = "{}".format(stdout.read())
             output = output[2:-3]
@@ -102,6 +115,9 @@ def ptmp_check(myconn, ip, user="root", pswd="admin", port=22):
 
 
 def get_mac(myconn, ip, user="root", pswd="admin", port=22):
+    ###
+    # Get the MAC address of the device connected to MBU customer interface
+    ###
     if myconn is None:  # If no previous ssh connection made, make one
         close = True
         myconn = paramiko.SSHClient()
@@ -122,6 +138,10 @@ def get_mac(myconn, ip, user="root", pswd="admin", port=22):
 
 
 def get_address(myconn, ip=None, user="root", pswd="admin", port=22):
+    ###
+    # Return hostname of the MBU
+    # Translates to LinkView site name
+    ###
     if myconn is None:
         close = True
         myconn = paramiko.SSHClient()
@@ -144,6 +164,11 @@ def get_address(myconn, ip=None, user="root", pswd="admin", port=22):
 
 
 async def async_mtr(ips, hop_info):
+    ###
+    # Async mtr function
+    # In theory this should be able to run in parallel with the rest of the code in the future
+    # Would allow for checking if path changes while troubleshooting
+    ###
     mtr_results = {}
     for ip in ips:
         mtr_results[ip] = {}
@@ -198,10 +223,16 @@ async def async_mtr(ips, hop_info):
 
 
 def mtr(ips, hop_info):
+    ###
+    # mtr synchronous to asynchronous function
+    ###
     asyncio.run(async_mtr(ips, hop_info))
 
 
 def get_version(myconn, ip=None, user="root", pswd="admin", port=22):
+    ###
+    # Return firmware version of the MBU
+    ###
     if myconn is None:
         close = True
         myconn = paramiko.SSHClient()
@@ -219,6 +250,10 @@ def get_version(myconn, ip=None, user="root", pswd="admin", port=22):
 
 
 def route_print(hop_info):
+    ###
+    # Prints the full route table
+    # Maybe a good idea to use PrettyTable for this instead for consistency
+    ###
     j = 1
     for ip in hop_info:
         print(f"Hop {j} = {ip}\n"
@@ -232,16 +267,19 @@ def route_print(hop_info):
 
 
 def gather_route(ip_list, hop_info=None, user="root", pswd="admin", port=22):
+    ###
+    # Gathers the route table and all information for each hop
+    ###
     if hop_info is None:
         hop_info = {}
     if ip_list is None:
         ip_list = []
-    i = 1
 
     def go_check(target_ip):
+        i = 1
         while True:
             try:
-                myconn = paramiko.SSHClient()
+                myconn = paramiko.SSHClient()  # Create SSH connection for hop
                 myconn.set_missing_host_key_policy(paramiko.AutoAddPolicy())
                 myconn.connect(target_ip, username=user, password=pswd, port=port)
                 hop_info[target_ip] = {}
@@ -295,6 +333,11 @@ def gather_route(ip_list, hop_info=None, user="root", pswd="admin", port=22):
 
 
 def route_change_check(target_ip, prefix, ip_list, hop_info):
+    ###
+    # Checks if the route table has changed
+    # Prints out difference if there has been changes
+    # *important to note, the ips are all formatted to end in '00::1' to ignore changes in MBU interface
+    ###
     new_traceroute = traceroute(target_ip)
     new_ip_list = hop_to_ip(new_traceroute, prefix)
     new_ip_list = ip_format(new_ip_list)
@@ -335,6 +378,9 @@ def route_change_check(target_ip, prefix, ip_list, hop_info):
 
 
 def route_tests(hop_info, ip_list):
+    ###
+    # Gathers all Eero tests in path
+    ###
     i = 1
     for ip in ip_list:
         try:
@@ -470,6 +516,9 @@ def path_check(ip=None):
 
 
 def single_site_check():  # Return 0 if exiting single site check
+    ###
+    # Single Site Check
+    ###
     ip = ip_check()  # Prompt user for IP and check if valid IPv6
     if ip == 0 or ip == '0':  # Exit if user enters for IPv6
         return 0
