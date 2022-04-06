@@ -18,9 +18,12 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-def ip_check():
+def ip_check():  # Return string if IP is valid, else return 0
     while True:
         try:
+            ###
+            # Get MBU IPv6 from user. Strip any whitespace and check if valid.
+            ###
             target_ip = str(input("What is the target MBU IPv6? (0 to exit) ")).strip()
             if target_ip == 0 or target_ip == "0":
                 return 0
@@ -348,13 +351,20 @@ def route_tests(hop_info, ip_list):
 
 
 def path_check(ip=None):
+    ###
+    # This function will check the path taken to the target MBU IPv6
+    ###
     try:
-        if ip is not None:
+        if ip is not None:  # If the user has specified an IPv6 address, make that the target
             target_ip = ip
         else:
             target_ip = ip_check()
         if target_ip == 0 or target_ip == '0':
             return
+        ###
+        # Prefix is the first section of the IPv6 address
+        # If we have the prefix, we can ignore some of the traceroute
+        ###
         prefix = str(target_ip.split(":")[0] + ":" + target_ip.split(":")[1])
 
         try:
@@ -456,13 +466,20 @@ def path_check(ip=None):
         print("Exiting...")
 
 
-def single_site_check():
-    ip = ip_check()
-    if ip == 0 or ip == '0':
+def single_site_check():  # Return 0 if exiting single site check
+    ip = ip_check()  # Prompt user for IP and check if valid IPv6
+    if ip == 0 or ip == '0':  # Exit if user enters for IPv6
         return 0
-    mac = get_mac(None, ip)
-    url, serial = EeroTests.search_by_mac(mac=mac)
-    customer_id = url
+    mac = get_mac(None, ip)  # Get MAC address of connected NIC on target MBU
+    if mac == '\'':  # Value that is returned if no MAC is found
+        url, serial, network_id = "N/A", "N/A", "N/A"
+    else:
+        oui = MacLookup().lookup(mac)
+        if oui == "eero inc.":
+            url, serial = EeroTests.search_by_mac(mac=mac)  # Search for Eero network from MAC address
+            network_id = url  # Using both URL and network ID in later functions
+        else:
+            url, serial, network_id = "N/A", "N/A", "N/A"
     while True:
         try:
             ###
@@ -478,9 +495,12 @@ def single_site_check():
             print("0. Exit")
             choice = int(input("Choice: "))
             if choice == 1:
-                table = PrettyTable(["IP", "MAC", "OUI", "Serial", "URL"])
+                ###
+                # Keeping target IP, but doing a new MAC lookup
+                ###
+                table = PrettyTable(["IP", "MAC", "OUI", "Serial", "URL"])  # PrettyTable for MAC lookup
                 mac = get_mac(None, ip)
-                if mac == '\'':
+                if mac == '\'':  # Value that is returned if no MAC is found
                     table.add_row([ip, "None Found", "N/A", "N/A", "N/A"])
                     print(table)
                 else:
@@ -488,23 +508,34 @@ def single_site_check():
                     if oui == "eero inc.":
                         url, serial = EeroTests.search_by_mac(mac=mac)
                         if url == "Missing Network" or serial == "Missing Serial":
-                            pass
+                            pass  # Do nothing if missing network or serial, just print
                         else:
-                            customer_id = url
+                            network_id = url  # Update network ID if found
                             url = f"https://dashboard.eero.com/networks/" \
                                   f"{url}"
-                    else:
+                    else:  # If not eero, set url and serial to N/A
                         url = "N/A"
                         serial = "N/A"
                     table.add_row([ip, mac, oui, serial, url])
                     print(table)
             elif choice == 2:
-                print(f"{ptmp_check(None, ip)}")
+                ###
+                # PTMP radio search for site that is not recorded in LinkView
+                # Should be run on anchor or seed MBU IPv6
+                ###
+                print(f"{ptmp_check(None, ip)}")  # Print PTMP check PrettyTable
             elif choice == 3:
+                ###
+                # Address lookup for site
+                # Useful in single site check if running an MTR test and need to know the address of an IPv6 address
+                ###
                 table = PrettyTable(["IP", "Address"])
                 table.add_row([ip, get_address(None, ip)])
                 print(table)
             elif choice == 4:
+                ###
+                # Print last 100 Eero tests for network, if oui is eero and network is found
+                ###
                 if oui != "eero inc.":
                     table = PrettyTable(["Eero Not Found"])
                     table.add_row(["No Tests Available"])
@@ -512,10 +543,22 @@ def single_site_check():
                     table = asyncio.run(EeroTests.single_eero_results(customer_id=network_id))
                 print(table)
             elif choice == 5:
+                ###
+                # Target different site
+                ###
                 ip = ip_check()
+                if ip == 0 or ip == '0':
+                    return 0
                 mac = get_mac(None, ip)
-                url, serial = EeroTests.search_by_mac(mac=mac)
-                customer_id = url
+                oui = MacLookup().lookup(mac)
+                if oui == "eero inc.":
+                    url, serial = EeroTests.search_by_mac(mac=mac)
+                    if url == "Missing Network" or serial == "Missing Serial":
+                        network_id = "N/A"
+                    else:
+                        network_id = url
+                else:
+                    url, serial, network_id = "N/A", "N/A", "N/A"
             elif choice == 0:
                 print("Exiting...")
                 break
@@ -527,27 +570,43 @@ def single_site_check():
 
 
 def main():
+    ###
+    # Program starts here
+    ###
     try:
+        ###
+        # We first check if there is a file called routers.json in the same directory as this program.
+        #   The routers.json file contains the MAC addresses, Serial Numbers, and URLs of all Eero routers that are
+        #   set up on the network.
+        ###
         with open("routers.json", "r") as f:  # Check if routers.json exists and if date is older than 1 day
             routers = json.load(f)
-            time = str(routers['date'])
+            time = str(routers['date'])  # Get the last updated date from the json file
             time = time.format("%Y-%m-%d_%H:%M:%S")
             time = arrow.get(time, "YYYY-MM-DD_HH:mm:ss")
             if time <= arrow.now() - datetime.timedelta(days=1):
+                ###
+                # (Y/n)/(y/N) -- During prompts, the uppercase Y or N indicates the default choice.
+                ###
                 choice = input("Your router list is older than 1 day. Would you like to update? (Y/n)")
                 if choice == "N" or choice == "n":
                     print("Using old router list...")
                 else:
                     print("Updating router list...")
+                    ###
+                    # asyncio.run because the function was designed to be async in case it is needed in the future
+                    ###
                     result = asyncio.run(EeroTests.grab_eeros())
                     print(result)
             else:
                 pass
-
+    ###
+    # If there is no routers.json file, we offer to create one.
+    ###
     except FileNotFoundError:
         print("No router list found. Create new list?")
         while True:
-            choice = input("(y/n): ")
+            choice = input("(y/n): ")  # No default choice, no capitalization
             if choice == "Y" or choice == "y":
                 print("Creating new router list...")
                 asyncio.run(EeroTests.grab_eeros())
@@ -559,18 +618,21 @@ def main():
             else:
                 print("Invalid Choice")
                 continue
-    except Exception as e:
+    except Exception as e:  # Rare case that router.json is corrupted
         print(f"\n\n\t{e}\n\n")
         print(f"Fatal Error with Checking for routers.json. Please delete routers.json and restart-----Exiting...")
         input("Press Enter to continue...")
         sys.exit(102)
     first_run = True
     while True:
-        if not first_run:
+        if not first_run:  # Used to check if the program has run through the menu before, simple for formatting
             print("\n\n")
         else:
             first_run = False
         try:
+            ###
+            # Main Menu
+            ###
             print("What would you like to do?")
             print("1. Single Site Check")
             print("2. Path Check")
@@ -579,12 +641,12 @@ def main():
             print("0. Exit")
             choice = int(input("Choice: "))
             if choice == 1:
-                single_site_check()
+                single_site_check()  # Functions for focusing on a single site
             elif choice == 2:
-                path_check()
+                path_check()  # Functions for focusing on all sites in a path
             elif choice == 3:
-                EeroTests.main()
-            elif choice == 4:
+                EeroTests.main()  # Some extra functions for Eero
+            elif choice == 4:  # Separate updater python file needed
                 print("Almost there... Not quite ready yet.")
                 # import auto_updater
                 # auto_updater.main()

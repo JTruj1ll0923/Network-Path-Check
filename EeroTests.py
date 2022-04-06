@@ -6,6 +6,10 @@ from prettytable import PrettyTable
 import datetime
 import arrow
 import sys
+import logging
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 try:
     secret_file = open('secrets.json', 'r')
@@ -86,6 +90,7 @@ def format_tests(tests):
         try:
             date = date - datetime.timedelta(hours=6)
         except Exception as err:
+            logger.exception(err)
             print(f"{err} -- Unable to convert time")
         test_results[i]['date'] = date
         i += 1
@@ -195,10 +200,14 @@ async def single_eero_results(customer_id=None):
 
 
 def search_by_mac(mac=None):
-    if mac is None:
+    if mac is None:  # If no mac is provided, return error. We should not reach this point. May want to change this
         return "No MAC address entered"
-    mac = mac[:-1].strip() + '0'
+    mac = mac[:-1].strip() + '0'  # Change last digit to 0 to search for MAC registered with Eero
     try:
+        ###
+        # This is where we will search for the MAC address in the router.json file
+        #   We are returned the Serial Number and the Network ID registered to the MAC
+        ###
         with open('routers.json') as json_file:
             data = json.load(json_file)
             customer_id = data[mac]['url']
@@ -206,10 +215,10 @@ def search_by_mac(mac=None):
             customer_id = customer_id[len(customer_id) - 1]
             serial = data[mac]['serial']
         json_file.close()
-        return customer_id, serial
+        return customer_id, serial  # Return the customer ID and serial number
     except Exception as err:
         print(err)
-        return "Missing Network", "Missing Serial"
+        return "Missing Network", "Missing Serial"  # Return missing network and serial number if not found
 
 
 def search_by_serial():
@@ -243,6 +252,7 @@ async def async_tasker(session, customer_id):
                 print("No results found.")
                 break
         except Exception as err:
+            logger.exception(err)
             print(f"Error: {err}")  # Add possible error retry logic here
             continue
     return result
@@ -297,6 +307,7 @@ def mass_test():
                         tests_done += 1
 
         except Exception as err:
+            logger.exception(err)
             print(f"Error: {err}")
             continue
 
