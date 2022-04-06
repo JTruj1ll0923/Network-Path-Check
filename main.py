@@ -405,9 +405,11 @@ def path_check(ip=None):
                     for ip in hop_info:
                         table.add_row([i, ip])
                         i += 1
+                    print(table)
                 elif choice == 2:
                     print("\n\n")
-                    table = PrettyTable(["IP", "MAC", "OUI", "Serial", "URL"])
+                    i = 1
+                    table = PrettyTable(["Num", "IP", "MAC", "OUI", "Serial", "URL"])
                     for hop in hop_info:
                         mac = hop_info[hop]['router']['mac']
                         oui = hop_info[hop]['router']['oui']
@@ -420,15 +422,18 @@ def path_check(ip=None):
                                       f"{url}"
                         else:
                             url, serial = "N/A", "N/A"
-                        table.add_row([hop, mac, oui, serial, url])
+                        table.add_row([i, hop, mac, oui, serial, url])
+                        i += 1
                     print(table)
 
                 elif choice == 3:
                     print("\n\n")
                     i = 1
+                    table = PrettyTable(["Num", "IP", "Address", "MBU Version"])
                     for ip in hop_info:
-                        print(f"{i}: {hop_info[ip]['version']}")
+                        table.add_row([i, ip, hop_info[ip]['address'], hop_info[ip]['version']])
                         i += 1
+                    print(table)
                 elif choice == 4:
                     print("\n\n")
                     mtr(ip_list, hop_info)
@@ -460,7 +465,10 @@ def single_site_check():
     customer_id = url
     while True:
         try:
-            print("\n\n")
+            ###
+            # Single site menu
+            ###
+            print("\n")
             print("What would you like to do?")
             print("1. MAC Lookup")
             print("2. PTMP Check")
@@ -491,12 +499,18 @@ def single_site_check():
                     table.add_row([ip, mac, oui, serial, url])
                     print(table)
             elif choice == 2:
-                print(f"\n\n{ptmp_check(None, ip)}")
+                print(f"{ptmp_check(None, ip)}")
             elif choice == 3:
-                print(f"\n\nAddress = {get_address(None, ip)}")
+                table = PrettyTable(["IP", "Address"])
+                table.add_row([ip, get_address(None, ip)])
+                print(table)
             elif choice == 4:
-                result = asyncio.run(EeroTests.single_eero_results(customer_id=customer_id))
-                print(result)
+                if oui != "eero inc.":
+                    table = PrettyTable(["Eero Not Found"])
+                    table.add_row(["No Tests Available"])
+                else:
+                    table = asyncio.run(EeroTests.single_eero_results(customer_id=network_id))
+                print(table)
             elif choice == 5:
                 ip = ip_check()
                 mac = get_mac(None, ip)
