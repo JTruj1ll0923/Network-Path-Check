@@ -56,7 +56,7 @@ def ip_format(imported_ip_list):
     return formatted_ip_list
 
 
-def ptmp_check(myconn, ip=None, user="root", pswd="admin", port=22):
+def ptmp_check(myconn, ip, user="root", pswd="admin", port=22):
     if myconn is None:
         myconn = paramiko.SSHClient()
         myconn.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -67,7 +67,9 @@ def ptmp_check(myconn, ip=None, user="root", pswd="admin", port=22):
     out = out[2:-3]
     ptmp_table = PrettyTable(['IPv6', 'Eth Port', 'Address'])
     if out == 0 or out == "0":
-        return "No PTMP"
+        ptmp_table.add_row(["No PTMPs found", "N/A", get_address(myconn=myconn, ip=ip)])
+        myconn.close()
+        return ptmp_table
     else:
         remote_cmd = 'grep -i -B 2 ptmp /tmp/run/lldp_server.json | grep -io eth[0-4]'
 
@@ -92,27 +94,38 @@ def ptmp_check(myconn, ip=None, user="root", pswd="admin", port=22):
 
         for ip in ips:
             ptmp_table.add_row([ip, eths[ip], get_address(None, ip)])
-
+        myconn.close()
         return ptmp_table
 
 
-def get_mac(myconn, ip=None, user="root", pswd="admin", port=22):
-    if myconn is None:
+def get_mac(myconn, ip, user="root", pswd="admin", port=22):
+    if myconn is None:  # If no previous ssh connection made, make one
+        close = True
         myconn = paramiko.SSHClient()
         myconn.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         myconn.connect(ip, username=user, password=pswd, port=port)
+    else:
+        close = False
+    ###
+    # Get MAC from target with grep extracting from MBU bridge table
+    ###
     remote_cmd = 'bridge fdb show | grep -iE \"dev (ghn0|eth[0-4]) master br\" | grep -v \"c4:93:00\"'
     (stdin, stdout, stderr) = myconn.exec_command(remote_cmd)
     out = "{}".format(stdout.read())
     out = str(out[2:].split()[0])
+    if close:
+        myconn.close()
     return out
 
 
 def get_address(myconn, ip=None, user="root", pswd="admin", port=22):
     if myconn is None:
+        close = True
         myconn = paramiko.SSHClient()
         myconn.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         myconn.connect(ip, username=user, password=pswd, port=port)
+    else:
+        close = False
     remote_cmd = 'grep hostname /tmp/config.json'
     (stdin, stdout, stderr) = myconn.exec_command(remote_cmd)
     out = "{}".format(stdout.read())
@@ -122,6 +135,8 @@ def get_address(myconn, ip=None, user="root", pswd="admin", port=22):
     out = out.split(".")[1]
     if out[len(out) - 1] == "\"":
         out = out[:-1]
+    if close:
+        myconn.close()
     return out
 
 
@@ -183,12 +198,20 @@ def mtr(ips, hop_info):
     asyncio.run(async_mtr(ips, hop_info))
 
 
-def get_version(myconn):
-
+def get_version(myconn, ip=None, user="root", pswd="admin", port=22):
+    if myconn is None:
+        close = True
+        myconn = paramiko.SSHClient()
+        myconn.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        myconn.connect(ip, username=user, password=pswd, port=port)
+    else:
+        close = False
     remote_cmd = 'grep rev /usr/lib/release/firmux'
     (stdin, stdout, stderr) = myconn.exec_command(remote_cmd)
     version = "{}".format(stdout.read())
     version = version[2:-3]
+    if close:
+        myconn.close()
     return version
 
 
@@ -221,7 +244,7 @@ def gather_route(ip_list, hop_info=None, user="root", pswd="admin", port=22):
                 hop_info[target_ip] = {}
                 hop_info[target_ip]["address"] = get_address(myconn)
                 hop_info[target_ip]["router"] = {}
-                mac = str(get_mac(myconn))
+                mac = str(get_mac(myconn, target_ip))
                 hop_info[target_ip]["router"]["mac"] = mac
                 # print(mac)
                 if mac == "\'":
@@ -233,8 +256,6 @@ def gather_route(ip_list, hop_info=None, user="root", pswd="admin", port=22):
                     hop_info[target_ip]["router"]["oui"] = oui
                     if hop_info[target_ip]["router"]["oui"] == "eero inc.":
                         url, serial = EeroTests.search_by_mac(mac=mac)
-                        # print(url)
-                        # print(serial)
                         if url != "Missing Network" and serial != "Missing Serial":
 
                             hop_info[target_ip]["router"]["url"] = url
