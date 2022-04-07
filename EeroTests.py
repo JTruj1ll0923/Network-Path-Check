@@ -163,24 +163,30 @@ async def grab_eeros():
     networks = list_networks()
     i = 1
     print("Grabbing network page", end=":\n")
+    done = False
     while True:
-        if i % 10 == 0:
+        if (i - 1) % 10 == 0:
             print("\n")
         print(f"{i}", end="...")
         i += 1
         for network in networks['data']['networks']:
             network_list.append(network)
-        try:  # If there are more pages, keep going
-            if networks['pagination']['next'] is not None:
-                offset = networks['pagination']['next']
-                offset = offset.split('?')[1]
-                offset = offset.split('=')[1]
-                networks = list_networks(params={"offset": offset})
-            else:
-                break
-        except KeyError:
-            print("Error: No more pages")
+        if done:
+            print("That's all folks!")
             break
+        else:
+            try:  # If there are more pages, keep going
+                if networks['pagination']['next'] is not None:
+                    offset = networks['pagination']['next']
+                    offset = offset.split('?')[1]
+                    offset = offset.split('=')[1]
+                    networks = list_networks(params={"offset": offset})
+                else:
+                    break
+            except KeyError:
+                done = True
+                networks = list_networks()
+                continue
     i = 1
     network_dict = {}
     router_dict = {}
@@ -378,7 +384,7 @@ def main():
                     table = PrettyTable(['MAC', 'Serial', 'URL'])
                     mac = input("Enter the MAC address of the router you want to search for: ")
                     url, serial = search_by_mac(mac)
-                    url = f"https://dashboard.eero.com/networks/url"
+                    url = f"https://dashboard.eero.com/networks/{url}"
                     table.add_row([mac, serial, url])
                     print(table)
                 elif sub_choice == 2:
