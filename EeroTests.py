@@ -12,6 +12,11 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 try:
+    ###
+    # This is where we load the API key from the secrets.json file
+    # This file and/or API key should never be shared with anyone
+    # This file is not in the repo, but is in the same directory as this program
+    ###
     secret_file = open('secrets.json', 'r')
     secrets = json.load(secret_file)
     secret_file.close()
@@ -24,6 +29,11 @@ try:
         "X-User-Token": user_token
     }
 except Exception as e:
+    ###
+    # If we can't load the API key, let's ask for one
+    # In the future it would be better to have a secure way to store the API key
+    # Also in the future we should continue without the API key, may cause problems without it currently
+    ###
     print("Error: " + str(e))
     print("Could not load secrets.json for API key")
     user_token = None
@@ -57,6 +67,9 @@ except Exception as e:
         else:
             print("Invalid input")
             continue
+    ###
+    # Generate the headers
+    ###
     headers = {
         "Content-Type": "application/json",
         "X-Lang": "en-US",
@@ -67,6 +80,9 @@ except Exception as e:
 
 
 def slow_day_report():
+    ###
+    # Not implemented, but this could be used to get a list of all 'slow' networks
+    ###
     report_url = f"{base_url}/organizations/self/slow_network_counts_by_day"
     start = input("Enter start date (YYYY-MM-DD): ")
     print(start)
@@ -77,6 +93,9 @@ def slow_day_report():
 
 
 def format_tests(tests):
+    ###
+    # This converts the speed test date/time from GMT to MST
+    ###
     tests = tests['data']
     i = 1
     test_results = {}
@@ -98,6 +117,9 @@ def format_tests(tests):
 
 
 async def speed_test_list(customer_id=None):
+    ###
+    # This gives us a list of all speed tests for an Eero network
+    ###
     if customer_id is None:
         while True:
             try:
@@ -108,7 +130,7 @@ async def speed_test_list(customer_id=None):
                 print("Invalid Customer ID")
                 continue
     network_url = f"{base_url}/networks/{customer_id}/speedtest"
-    data = {"limit": 100}
+    data = {"limit": 100}  # API limit is 100
     result = requests.get(network_url, headers=headers, params=data)
     if result.status_code == 200:
         result = result.json()
@@ -119,6 +141,10 @@ async def speed_test_list(customer_id=None):
 
 
 def list_networks(params=None):
+    ###
+    # This gives us a list of all Eero networks
+    # This is half of the work to generate routers.json
+    ###
     networks_url = f"{base_url}/organizations/self/networks/administered"
     if params is None:
         result = requests.get(networks_url, headers=headers)
@@ -129,6 +155,10 @@ def list_networks(params=None):
 
 
 async def grab_eeros():
+    ###
+    # This gives us a list of all Eero networks
+    # This is the other half of the work to generate routers.json
+    ###
     network_list = []
     networks = list_networks()
     i = 1
@@ -140,7 +170,7 @@ async def grab_eeros():
         i += 1
         for network in networks['data']['networks']:
             network_list.append(network)
-        try:
+        try:  # If there are more pages, keep going
             if networks['pagination']['next'] is not None:
                 offset = networks['pagination']['next']
                 offset = offset.split('?')[1]
@@ -149,13 +179,13 @@ async def grab_eeros():
             else:
                 break
         except KeyError:
-            print("That's all folks!")
+            print("Error: No more pages")
             break
     i = 1
     network_dict = {}
     router_dict = {}
     time = arrow.now().format('YYYY-MM-DD_HH:mm:ss')
-    router_dict['date'] = time
+    router_dict['date'] = time  # This is the date of the routers.json file
     for network in network_list:  # Combine all Eero network dictionaries into one dictionary
         network_dict[i] = {}
         network_dict[i]['url'] = network['url']
@@ -185,6 +215,9 @@ async def grab_eeros():
 
 
 async def single_eero_results(customer_id=None):
+    ###
+    # This requests the results of a single Eero network and builds a table
+    ###
     if customer_id is None:
         return
     tests = await speed_test_list(customer_id)
@@ -200,14 +233,14 @@ async def single_eero_results(customer_id=None):
 
 
 def search_by_mac(mac=None):
+    ###
+    # This is where we will search for the MAC address in the router.json file
+    #   We are returned the Serial Number and the Network ID registered to the MAC
+    ###
     if mac is None:  # If no mac is provided, return error. We should not reach this point. May want to change this
         return "No MAC address entered"
     mac = mac[:-1].strip() + '0'  # Change last digit to 0 to search for MAC registered with Eero
     try:
-        ###
-        # This is where we will search for the MAC address in the router.json file
-        #   We are returned the Serial Number and the Network ID registered to the MAC
-        ###
         with open('routers.json') as json_file:
             data = json.load(json_file)
             customer_id = data[mac]['url']
@@ -222,6 +255,9 @@ def search_by_mac(mac=None):
 
 
 def search_by_serial():
+    ###
+    # Not as useful as search_by_mac, but maybe useful later
+    ###
     serial = input("Enter the serial of the router you want to search for: ")
     try:
         with open('routers.json') as json_file:
