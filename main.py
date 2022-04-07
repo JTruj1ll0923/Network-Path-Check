@@ -465,7 +465,11 @@ def path_check(ip=None):
                 print("6. Route Change Check")
                 print("7. Print Eero Test Results")
                 print("0. Exit")
-                choice = int(input("Choice: "))
+                try:
+                    choice = int(input("Choice: "))
+                except ValueError:
+                    print("Invalid Choice")
+                    continue
                 if choice == 1:
                     print("\n\n")
                     i = 1
@@ -554,7 +558,11 @@ def single_site_check():  # Return 0 if exiting single site check
             print("4. Print Eero Tests")
             print("5. Target Different Site")
             print("0. Exit")
-            choice = int(input("Choice: "))
+            try:
+                choice = int(input("Choice: "))
+            except ValueError:
+                print("Invalid Choice")
+                continue
             if choice == 1:
                 ###
                 # Keeping target IP, but doing a new MAC lookup
@@ -703,7 +711,11 @@ def main():
             print("3. Eero Check")
             print("4. Check for program update")
             print("0. Exit")
-            choice = int(input("Choice: "))
+            try:
+                choice = int(input("Choice: "))
+            except ValueError:
+                print("Invalid Choice")
+                continue
             if choice == 1:
                 single_site_check()  # Functions for focusing on a single site
             elif choice == 2:

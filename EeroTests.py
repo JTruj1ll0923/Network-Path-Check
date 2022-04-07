@@ -363,7 +363,11 @@ def main():
             print("3. Grab Specific Eero Test")
             print("4. Mass Tester")
             print("0. Exit")
-            choice = int(input("Enter your choice: "))
+            try:
+                choice = int(input("Enter your choice: "))
+            except ValueError:
+                print("Invalid Choice")
+                continue
             if choice == 1:
                 print("Grabbing New Eero List")
                 asyncio.run(grab_eeros())
@@ -379,7 +383,11 @@ def main():
                 print("1. Search by MAC")
                 print("2. Search by Serial")
                 print("3. Search by Eero Network #")
-                sub_choice = int(input("Search by MAC, Serial, or Eero Network #: "))
+                try:
+                    sub_choice = int(input("Search by MAC, Serial, or Eero Network #: "))
+                except ValueError:
+                    print("Invalid Choice")
+                    continue
                 if sub_choice == 1:
                     table = PrettyTable(['MAC', 'Serial', 'URL'])
                     mac = input("Enter the MAC address of the router you want to search for: ")
