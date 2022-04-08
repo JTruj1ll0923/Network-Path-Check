@@ -1,3 +1,8 @@
+########################################################################################################################
+# Made by: Justin Trujillo - jtrujillo@gmail.com
+# Made for: WeLink Communications Technical Support
+# License: GPLv3
+########################################################################################################################
 import paramiko
 from icmplib import traceroute
 from icmplib import async_multiping
@@ -141,7 +146,7 @@ def get_mac(myconn, ip, user="root", pswd="admin", port=22):
     (stdin, stdout, stderr) = myconn.exec_command(remote_cmd)
     out = "{}".format(stdout.read())
     out = str(out[2:].split()[0])
-    if close:
+    if close:  # If we made a new connection, close it. If the session was called with the function it can still be used
         myconn.close()
     return out
 
