@@ -4,8 +4,7 @@
 # License: GPLv3
 ########################################################################################################################
 import paramiko
-from icmplib import traceroute
-from icmplib import async_multiping
+from icmplib import traceroute, async_multiping, ping
 from mac_vendor_lookup import MacLookup
 import ipaddress
 import threading
@@ -33,7 +32,12 @@ def ip_check():  # Return string if IP is valid, else return 0
             if target_ip == 0 or target_ip == "0":
                 return 0
             if ipaddress.IPv6Address(target_ip):
-                break
+                reachable = ping(target_ip)
+                if reachable.packet_loss == 0.0:
+                    break
+                else:
+                    print("\n\n\nIP is not reachable")
+                    return 0
             else:
                 print("Invalid IPv6")
                 continue
