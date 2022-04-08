@@ -96,7 +96,7 @@ def ptmp_check(myconn, ip, user="root", pswd="admin", port=22):
         myconn = paramiko.SSHClient()
         myconn.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         myconn.connect(ip, username=user, password=pswd, port=port)
-    remote_cmd = 'grep -B 2 -ci ptmp /tmp/run/lldp_server.json' # Check if PTMP radio is present
+    remote_cmd = 'grep -B 2 -ci ptmp /tmp/run/lldp_server.json'  # Check if PTMP radio is present
     stdin, stdout, stderr = myconn.exec_command(remote_cmd)
     out = "{}".format(stdout.read())
     out = out[2:-3]
@@ -330,6 +330,7 @@ def gather_route(ip_list, hop_info=None, user="root", pswd="admin", port=22):
                 myconn.close()
                 break
             except Exception as err:
+                logger.error(f"Error: {err}")
                 i += 1
                 if i > 5:
                     print(f"\n\t{target_ip} is not responding.\n")
@@ -702,8 +703,10 @@ def main():
                 continue
     except Exception as e:  # Rare case that router.json is corrupted
         redo = input("\n\n\tEero Router list is corrupted. Should we create a new list? (Y/n): ")
-        if redo == "N" or redo =="n":
+        if redo == "N" or redo == "n":
+            print(f"\n{e}\n")
             print("Exiting...")
+            sys.exit(102)
         else:
             os.remove("routers.json")
             asyncio.run(EeroTests.grab_eeros())
