@@ -633,7 +633,7 @@ def single_site_check():  # Return 0 if exiting single site check
                     return 0
                 mac = get_mac(None, ip)
                 if mac == '\'':  # Value that is returned if no MAC is found
-                    url, serial, network_id = "N/A", "N/A", "N/A"
+                    url, serial, network_id, oui = "N/A", "N/A", "N/A", "N/A"
                 else:
                     oui = MacLookup().lookup(mac)
                     if oui == "eero inc.":
