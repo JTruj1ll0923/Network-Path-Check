@@ -37,7 +37,9 @@ def ip_check():  # Return string if IP is valid, else return 0
                 if reachable.packet_loss == 0.0:
                     break
                 else:
-                    print("\n\n\nIP is not reachable")
+                    table = PrettyTable(["IP", "Reachable"])
+                    table.add_row([target_ip, "No"])
+                    print(table)
                     return 0
             else:
                 print("Invalid IPv6")
