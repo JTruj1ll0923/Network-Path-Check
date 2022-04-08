@@ -15,6 +15,7 @@ import json
 from prettytable import PrettyTable
 import datetime
 import arrow
+import os
 
 import EeroTests
 
@@ -669,11 +670,11 @@ def main():
                 ###
                 # (Y/n)/(y/N) -- During prompts, the uppercase Y or N indicates the default choice.
                 ###
-                choice = input("Your router list is older than 1 day. Would you like to update? (Y/n)")
+                choice = input("Your Eero router list is older than 1 day. Would you like to update? (Y/n)")
                 if choice == "N" or choice == "n":
-                    print("Using old router list...")
+                    print("Using old Eero router list...")
                 else:
-                    print("Updating router list...")
+                    print("Updating Eero router list...")
                     ###
                     # asyncio.run because the function was designed to be async in case it is needed in the future
                     ###
@@ -685,25 +686,28 @@ def main():
     # If there is no routers.json file, we offer to create one.
     ###
     except FileNotFoundError:
-        print("No router list found. Create new list?")
+        print("No Eero router list found. Create new list?")
         while True:
             choice = input("(y/n): ")  # No default choice, no capitalization
             if choice == "Y" or choice == "y":
-                print("Creating new router list...")
+                print("Creating new Eero router list...")
                 asyncio.run(EeroTests.grab_eeros())
                 print("Done!")
                 break
             elif choice == "n" or choice == "N":
-                print("Starting program without router list...")
+                print("Starting program without Eero router list...")
                 break
             else:
                 print("Invalid Choice")
                 continue
     except Exception as e:  # Rare case that router.json is corrupted
-        print(f"\n\n\t{e}\n\n")
-        print(f"Fatal Error with Checking for routers.json. Please delete routers.json and restart-----Exiting...")
-        input("Press Enter to continue...")
-        sys.exit(102)
+        redo = input("\n\n\tEero Router list is corrupted. Should we create a new list? (Y/n): ")
+        if redo == "N" or redo =="n":
+            print("Exiting...")
+        else:
+            os.remove("routers.json")
+            asyncio.run(EeroTests.grab_eeros())
+            print("Done!")
     first_run = True
     while True:
         if not first_run:  # Used to check if the program has run through the menu before, simple for formatting
