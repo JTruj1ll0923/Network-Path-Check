@@ -217,7 +217,6 @@ async def grab_eeros():
     routers = open('routers.json', 'w')
     routers.write(json.dumps(router_dict))
     routers.close()
-    return "That's all folks!"
 
 
 async def single_eero_results(customer_id=None):

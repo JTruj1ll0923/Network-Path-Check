@@ -1,5 +1,5 @@
 ########################################################################################################################
-# Made by: Justin Trujillo - jtrujillo@gmail.com
+# Made by: Justin Trujillo - jtrujillo923@gmail.com
 # Made for: WeLink Communications Technical Support
 # License: GPLv3
 ########################################################################################################################
@@ -681,8 +681,7 @@ def main():
                     ###
                     # asyncio.run because the function was designed to be async in case it is needed in the future
                     ###
-                    result = asyncio.run(EeroTests.grab_eeros())
-                    print(result)
+                    asyncio.run(EeroTests.grab_eeros())
             else:
                 pass
     ###
