@@ -11,6 +11,76 @@ import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
+
+def save_secret(token):
+    while True:
+        c = input("Would you like to save this token for future use? (y/n): ")
+        if c == 'y' or c == 'Y':
+            try:
+                tmp_secret = open('secrets.json', 'w')
+                json.dump({"user_token": token}, tmp_secret)
+                tmp_secret.close()
+                print("Saved!")
+                break
+            except Exception as err:
+                print("Error: " + str(err))
+                c2 = input("Could not save correctly, try again? (y/n): ")
+                while True:
+                    if c2 == 'y' or c2 == 'Y':
+                        break
+                    elif c2 == 'n' or c2 == 'N':
+                        print("Cannot continue... press ENTER to exit")
+                        input()
+                        sys.exit()
+                    else:
+                        print("Invalid input...")
+            break
+        elif c == 'n' or c == 'N':
+            print("Continuing without saving")
+            break
+        else:
+            print("Invalid input")
+
+
+def verify_api_key(token, email=""):
+    ###
+    # This verifies the API key
+    ###
+    verification_code = input(f"Enter Eero verification code delivered to your email ({email}): ")
+    url = "https://api-user.e2ro.com/2.2/login/verify"
+    verify_payload = {'code': f'{verification_code}'}
+    verify_header = {"X-User-Token": f'{token}'}
+    response = requests.post(url, headers=verify_header, data=verify_payload)
+    if response.status_code == 200:
+        # print("Account Verified? " + str(response.json()['data']['email']['verified']))
+        return 0
+    else:
+        return "Potentially incorrect verification code... Try again? (y/n): "
+
+
+def generate_eero_api_key():
+    while True:
+        email = input("Enter Eero account email address: ")
+        login_payload = {"login": f"{email}"}
+        response = requests.post("https://api-user.e2ro.com/2.2/pro/login", login_payload)
+        # print(response.status_code)
+        # print(response.json())
+        if response.status_code == 200:
+            token = response.json()["data"]["user_token"]
+    # print("Unverified Access Token: " + token)
+            verify = verify_api_key(token, email)
+            if verify == 0:
+                print("Verified, continuing...")
+                save_secret(token)
+                break
+            else:
+                print(verify)
+                continue
+
+
+
+
+
 try:
     ###
     # This is where we load the API key from the secrets.json file
@@ -34,34 +104,27 @@ except Exception as e:
     # In the future it would be better to have a secure way to store the API key
     # Also in the future we should continue without the API key, may cause problems without it currently
     ###
-    print("Error: " + str(e))
-    print("Could not load secrets.json for API key")
+    # print("Error: " + str(e))
+    print("Could not load Eero API key")
     user_token = None
     while True:
-        c = input("Would you like to enter your credentials manually? (y/n)")
-        if c == 'y' or c == 'Y':
+        try:
+            c = int(input("Should we..."
+                      "\n1. Generate a new API key?"
+                      "\n2. Enter API key manually?"
+                      "\n3. Exit?"
+                      "\nChoice: "))
+        except TypeError:
+            print("Invalid input")
+            continue
+        if c == 1:
+            generate_eero_api_key()
+        elif c == 2:
             user_token = input("Enter your user token: ")
-            while True:
-                c = input("Would you like to save this token to secrets.json? (y/n)")
-                if c == 'y' or c == 'Y':
-                    try:
-                        secret_file = open('secrets.json', 'w')
-                        json.dump({"user_token": user_token}, secret_file)
-                        secret_file.close()
-                        print("Saved!")
-                        break
-                    except Exception as e:
-                        print("Error: " + str(e))
-                        print("Could not save to secrets.json")
-                        break
-                elif c == 'n' or c == 'N':
-                    print("Continuing without saving")
-                    break
-                else:
-                    print("Invalid input")
+            save_secret(user_token)
             break
-        elif c == 'n' or c == 'N':
-            print("Press any key to exit")
+        elif c == 3:
+            print("Cannot continue... press ENTER to exit")
             input()
             sys.exit()
         else:
