@@ -158,7 +158,7 @@ def get_mac(myconn, ip, user="root", pswd="admin", port=22):
     return out
 
 
-def get_address(myconn, ip=None, user="root", pswd="admin", port=22):
+def get_address(myconn=None, ip=None, user="root", pswd="admin", port=22):
     ###
     # Return hostname of the MBU
     # Translates to LinkView site name
@@ -275,16 +275,18 @@ def route_print(hop_info):
     # Prints the full route table
     # Maybe a good idea to use PrettyTable for this instead for consistency
     ###
-    j = 1
+    i = 1
     for ip in hop_info:
-        print(f"Hop {j} = {ip}\n"
+        print(f"Hop {i} = {ip}\n"
               f"\tAddress = {hop_info[ip]['address']}\n"
               f"\tMBU Version = {hop_info[ip]['version']}\n"
               f"\tRouter MAC = {hop_info[ip]['router']['mac']}\n"
               f"\tRouter OUI = {hop_info[ip]['router']['oui']}")
         if hop_info[ip]['router']['url'] != "N/A":
             print(f"\tRouter URL = https://dashboard.eero.com/networks/{hop_info[ip]['router']['url']}")
-        j += 1
+        if hop_info[ip]['conflict'] is True:
+            print(f"\tChannel conflict detected!!!!!!!!")
+        i += 1
 
 
 def gather_route(ip_list, hop_info=None, user="root", pswd="admin", port=22):
@@ -296,6 +298,32 @@ def gather_route(ip_list, hop_info=None, user="root", pswd="admin", port=22):
     if ip_list is None:
         ip_list = []
 
+    def channel_check(myconn, target_ip):
+        ###
+        # Checks if a channel is assigned to multiple radios on the same MBU
+        ###
+        remote_cmd = 'ls /tmp/run/ | grep -i stats | grep -i eth'  # Stats are in /tmp/run/stats_{eth[1-4]/
+        (stdin, stdout, stderr) = myconn.exec_command(remote_cmd)
+        eths = "{}".format(stdout.read())[2:-3].split("\\n")
+        conflict = False
+        chan_eth = {}
+        channels = []
+
+        for eth in eths:
+            remote_cmd = f'grep -iE ".*" /tmp/run/{eth}/wireless.json'  # Channels in wireless.json
+            (stdin, stdout, stderr) = myconn.exec_command(remote_cmd)
+            out = str("{}".format(stdout.read())[2:-1].replace("\\n", ""))
+            data = json.loads(out)
+            chan = data['radios']['wlan0']['channel']
+
+            if chan not in channels:
+                channels.append(chan)
+                chan_eth[eth[6:]] = chan
+            else:
+                print(f"Channel conflict detected on channel {chan} at {get_address(ip=target_ip)}!!!!!!!!")
+                conflict = True
+        return conflict
+
     def go_check(target_ip):
         i = 1
         while True:
@@ -304,6 +332,7 @@ def gather_route(ip_list, hop_info=None, user="root", pswd="admin", port=22):
                 myconn.set_missing_host_key_policy(paramiko.AutoAddPolicy())
                 myconn.connect(target_ip, username=user, password=pswd, port=port)
                 hop_info[target_ip] = {}
+                hop_info[target_ip]['conflict'] = channel_check(myconn, target_ip)
                 hop_info[target_ip]["address"] = get_address(myconn)
                 hop_info[target_ip]["router"] = {}
                 mac = str(get_mac(myconn, target_ip))
