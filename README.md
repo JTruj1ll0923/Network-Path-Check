@@ -15,4 +15,4 @@ ___
     3. Make TSTool executable (pyinstaller .\main.py --onefile --noconfirm)
 ### Run TSTool
     1. Use either python code or TSTool executable
-    2. Follow prompts in terminal
+    2. Follow prompts in terminal window

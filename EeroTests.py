@@ -119,6 +119,7 @@ except Exception as e:
             continue
         if c == 1:
             generate_eero_api_key()
+            break
         elif c == 2:
             user_token = input("Enter your user token: ")
             save_secret(user_token)
