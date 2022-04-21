@@ -23,13 +23,84 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
+def cred_grab(user=None, pswd=None, port=None):
+    while True:
+        user = input("Please enter username: ")
+        if user == '':
+            print("User can't be blank, please try again...")
+            continue
+        else:
+            break
+    while True:
+        pswd = input("Please enter password: ")
+        if pswd == '':
+            print("Password can't be blank, please try again...")
+            continue
+        else:
+            break
+    while True:
+        while True:
+            try:
+                port = int(input("Please enter port: "))
+                if port < 1 or port > 65535:
+                    print("Port number must be an integer between 1-65535")
+                    continue
+                else:
+                    break
+            except TypeError:
+                print("Port number must be an integer between 1-65535")
+            except Exception as err:
+                print(err)
+                continue
+        if port == '':
+            print("Port can't be blank, please try again...")
+            continue
+        else:
+            break
+    return user, pswd, port
+
+
+def cred_check(user=None, pswd=None, port=None, redo=True, hop_info=None, ip_list=None):
+    # if hop_info is not None:
+    #     hop1 = None
+    #     i = 1
+    #     for hop in ip_list:
+    #         hop_info[hop] = {}
+    #         if hop1 is None:
+    #             hop1 = hop
+    #         print(f"Grabbing info for hop {i} - {hop}")
+    #         user, pswd, port = cred_grab(user, pswd, port)
+    #         hop_info[hop]['user'] = user
+    #         hop_info[hop]['pswd'] = pswd
+    #         hop_info[hop]['port'] = port
+    #         i += 1
+    #     return hop_info[hop1]['user'], hop_info[hop1]['pswd'], hop_info[hop1]['port']
+    # else:
+    if user is None and pswd is None:
+        user, pswd, port = cred_grab()
+    else:
+        if redo is True:
+            while True:
+                choice = input("Enter different credentials? (y/N): ")
+                if choice == "Y" or choice == "y":
+                    user, pswd, port = cred_grab(user, pswd, port)
+                    break
+                elif choice == "N" or choice == "n" or choice == '':
+                    print("Trying with previous credentials...")
+                    break
+                else:
+                    print("Invalid input, please try again...")
+                    continue
+    return user, pswd, port
+
+
 def ip_check():  # Return string if IP is valid, else return 0
     ###
     # Get MBU IPv6 from user. Strip any whitespace and check if valid.
     ###
     while True:
         try:
-            target_ip = str(input("What is the target MBU IPv6? (0 to exit) ")).strip()
+            target_ip = str(input("\nWhat is the target MBU IPv6? (0 to exit): ")).strip()
             if target_ip == 0 or target_ip == "0":
                 return 0
             if ipaddress.IPv6Address(target_ip):
@@ -89,7 +160,7 @@ def ip_format(imported_ip_list):
     return formatted_ip_list
 
 
-def ptmp_check(myconn, ip, user="root", pswd="admin", port=22):
+def ptmp_check(myconn=None, ip=None, user=None, pswd=None, port=None):
     ###
     # Check if the target MBU has a PTMP radio and if so, get the IPv6 for it
     # Also grab the leaf homes PTMP radio IPv6
@@ -130,12 +201,12 @@ def ptmp_check(myconn, ip, user="root", pswd="admin", port=22):
                 eths[new_ip] = ip.split(" ")[2]
 
         for ip in ips:
-            ptmp_table.add_row([ip, eths[ip], get_address(None, ip)])
+            ptmp_table.add_row([ip, eths[ip], get_address(None, ip, user=user, pswd=pswd, port=port)])
         myconn.close()
         return ptmp_table
 
 
-def get_mac(myconn, ip, user="root", pswd="admin", port=22):
+def get_mac(myconn=None, ip=None, user=None, pswd=None, port=None):
     ###
     # Get the MAC address of the device connected to MBU customer interface
     ###
@@ -158,7 +229,7 @@ def get_mac(myconn, ip, user="root", pswd="admin", port=22):
     return out
 
 
-def get_address(myconn=None, ip=None, user="root", pswd="admin", port=22):
+def get_address(myconn=None, ip=None, user=None, pswd=None, port=None):
     ###
     # Return hostname of the MBU
     # Translates to LinkView site name
@@ -250,7 +321,7 @@ def mtr(ips, hop_info):
     asyncio.run(async_mtr(ips, hop_info))
 
 
-def get_version(myconn, ip=None, user="root", pswd="admin", port=22):
+def get_version(myconn=None, ip=None, user=None, pswd=None, port=None):
     ###
     # Return firmware version of the MBU
     ###
@@ -289,14 +360,32 @@ def route_print(hop_info):
         i += 1
 
 
-def gather_route(ip_list, hop_info=None, user="root", pswd="admin", port=22):
+def gather_route(ip_list, hops=None, user=None, pswd=None, port=None):
     ###
     # Gathers the route table and all information for each hop
     ###
-    if hop_info is None:
-        hop_info = {}
+    if hops is None:
+        hops = {}
     if ip_list is None:
         ip_list = []
+
+    check = True
+    while True:
+        choice = input("Do any hops use different credentials? (y/N): ")
+        if choice == "Y" or choice == "y":
+            check = True
+            print("We will now gather credentials for each hop.")
+            # user, pswd, port = cred_check(user, pswd, port, check, hop_info, ip_list)
+            break
+        elif choice == "N" or choice == "n" or choice == '':
+            # print("Please give the credentials for the path.")
+            check = False
+            user, pswd, port = cred_check(user, pswd, port, check)
+            print("Continuing...")
+            break
+        else:
+            print("Invalid input. Please try again.")
+            continue
 
     def channel_check(myconn, target_ip):
         ###
@@ -324,66 +413,108 @@ def gather_route(ip_list, hop_info=None, user="root", pswd="admin", port=22):
                 conflict = True
         return conflict
 
-    def go_check(target_ip):
+    def go_check(target_ip, user, pswd, port, check):
         i = 1
+        myconn = None
         while True:
             try:
-                myconn = paramiko.SSHClient()  # Create SSH connection for hop
-                myconn.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                myconn.connect(target_ip, username=user, password=pswd, port=port)
-                hop_info[target_ip] = {}
-                hop_info[target_ip]['conflict'] = channel_check(myconn, target_ip)
-                hop_info[target_ip]["address"] = get_address(myconn)
-                hop_info[target_ip]["router"] = {}
+                if myconn is None:
+                    myconn = paramiko.SSHClient()  # Create SSH connection for hop
+                    myconn.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                if check:
+                    print(f"\nEnter credentials for {target_ip}")
+                    user, pswd, port = cred_check(user, pswd, port, check)
+                    hops[target_ip]['user'] = user
+                    hops[target_ip]['pswd'] = pswd
+                    hops[target_ip]['port'] = port
+                    myconn.connect(target_ip, username=user, password=pswd, port=port)
+                else:
+                    myconn.connect(target_ip, username=user, password=pswd, port=port)
+
+                # hop_info[target_ip] = {}
+                hops[target_ip]['conflict'] = channel_check(myconn, target_ip)
+                hops[target_ip]["address"] = get_address(myconn)
+                hops[target_ip]["router"] = {}
                 mac = str(get_mac(myconn, target_ip))
-                hop_info[target_ip]["router"]["mac"] = mac
+                hops[target_ip]["router"]["mac"] = mac
                 # print(mac)
                 if mac == "\'":
-                    hop_info[target_ip]["router"]["mac"] = "N/A"
-                    hop_info[target_ip]["router"]["oui"] = "N/A"
-                    hop_info[target_ip]["router"]["url"] = "N/A"
+                    hops[target_ip]["router"]["mac"] = "N/A"
+                    hops[target_ip]["router"]["oui"] = "N/A"
+                    hops[target_ip]["router"]["url"] = "N/A"
                 else:
                     oui = MacLookup().lookup(mac)
-                    hop_info[target_ip]["router"]["oui"] = oui
-                    if hop_info[target_ip]["router"]["oui"] == "eero inc.":
+                    hops[target_ip]["router"]["oui"] = oui
+                    if hops[target_ip]["router"]["oui"] == "eero inc.":
                         url, serial = EeroTests.search_by_mac(mac=mac)
                         if url != "Missing Network" and serial != "Missing Serial":
 
-                            hop_info[target_ip]["router"]["url"] = url
-                            hop_info[target_ip]["router"]["serial"] = serial
+                            hops[target_ip]["router"]["url"] = url
+                            hops[target_ip]["router"]["serial"] = serial
                         else:
-                            hop_info[target_ip]["router"]["url"] = "N/A"
-                            hop_info[target_ip]["router"]["serial"] = "N/A"
+                            hops[target_ip]["router"]["url"] = "N/A"
+                            hops[target_ip]["router"]["serial"] = "N/A"
                     else:
-                        hop_info[target_ip]["router"]["url"] = "N/A"
-                        hop_info[target_ip]["router"]["serial"] = "N/A"
-                hop_info[target_ip]["version"] = get_version(myconn)
+                        hops[target_ip]["router"]["url"] = "N/A"
+                        hops[target_ip]["router"]["serial"] = "N/A"
+                hops[target_ip]["version"] = get_version(myconn)
                 myconn.close()
                 break
             except Exception as err:
-                logger.error(f"Error: {err}")
                 i += 1
-                if i > 5:
-                    print(f"\n\t{target_ip} is not responding.\n")
-                    break
+                if i > 3:
+                    print(f"\n\tHaving trouble connecting to {target_ip}.")
+                    return True
                 else:
-                    print(f"\n\t{target_ip} is not responding. Trying again.\n")
+                    print(f"\n\tUnable to connect to {target_ip}. Trying again.")
                     continue
+        return user, pswd, port, False
 
-    threads = []
     for ip in ip_list:
+        hops[ip] = {}
+        try_again = True
         try:
-            t = threading.Thread(target=go_check, args=(ip,))
-            threads.append(t)
+            hops[ip]['user'] = user
+            hops[ip]['pswd'] = pswd
+            hops[ip]['port'] = port
+            while True:
+                try:
+                    user, pswd, port, fail = go_check(ip, user, pswd, port, check)
+                    if fail:
+                        print(f"Failed to connect to {ip}. Maybe the credentials are wrong?")
+                        while True:
+                            try:
+                                c = input("\tDo you want to try again? (y/n): ")
+                                if c == "y" or c == "Y" or c == "":
+                                    user, pswd, port = cred_check(None, None, None, True)
+                                    hops[ip]['user'] = user
+                                    hops[ip]['pswd'] = pswd
+                                    hops[ip]['port'] = port
+                                    try_again = True
+                                    break
+                                elif c == "n" or c == "N":
+                                    try_again = False
+                                    break
+                                else:
+                                    print("\n\tInvalid input.")
+                            except Exception as e:
+                                print(f"\n\tError: {e}")
+                                continue
+                    if try_again is False:
+                        break
+                    else:
+                        print(f"Finished grabbing info from {ip} - {hops[ip]['address']}.")
+                        break
+                except Exception as e:
+                    print(f"\n\tError: {e}")
+                    continue
         except Exception as e:
-            print(e)
-            return "Error"
-    for thread in threads:
-        thread.start()
-        thread.join()
+            print(f"\n\tError: {e}")
+            break
+    return hops
 
 
-def route_change_check(target_ip, prefix, ip_list, hop_info):
+def route_change_check(target_ip, prefix, ip_list, hop_info, user=None, pswd=None, port=None):
     ###
     # Checks if the route table has changed
     # Prints out difference if there has been changes
@@ -392,16 +523,42 @@ def route_change_check(target_ip, prefix, ip_list, hop_info):
     new_traceroute = traceroute(target_ip)
     new_ip_list = hop_to_ip(new_traceroute, prefix)
     new_ip_list = ip_format(new_ip_list)
-    route_change = PrettyTable(["Hop Number", "Original Route", "Original Address", "New Route", "New Address"])
+    new_hop_info = {}
+
+    check = True
+    user, pswd, port = None, None, None
     if new_ip_list != ip_list:
+        print(f"Route has changed, checking new route...")
+        for ip in new_hop_info:
+            new_hop_info[ip] = {}
+            new_hop_info[ip]['user'] = user
+            new_hop_info[ip]['pswd'] = pswd
+            new_hop_info[ip]['port'] = port
+        while True:
+            choice = input("Do any hops use different credentials? (y/N): ")
+            if choice == "Y" or choice == "y":
+                check = True
+                print("We will now gather credentials for each hop.")
+                # user, pswd, port = cred_check(user, pswd, port, check, hop_info, ip_list)
+            elif choice == "N" or choice == "n" or choice == '':
+                print("Please give the credentials for the path.")
+                user, pswd, port = cred_check(user, pswd, port, check)
+                check = False
+                print("Continuing...")
+                break
+            else:
+                print("Invalid input. Please try again.")
+                continue
+        new_hop_info = gather_route(new_ip_list, new_hop_info, user, pswd, port)
+        route_change = PrettyTable(["Hop Number", "Original Route", "Original Address", "New Route", "New Address"])
         if len(new_ip_list) > len(ip_list):
             for i in range(len(new_ip_list)):
                 try:
                     route_change.add_row([i + 1, ip_list[i], hop_info[ip_list[i]]['address'],
-                                          new_ip_list[i], get_address(None, new_ip_list[i])])
+                                          new_ip_list[i], new_hop_info[new_ip_list[i]]['address']])
                 except IndexError:
                     try:
-                        route_change.add_row([i + 1, "", "", new_ip_list[i], get_address(None, new_ip_list[i])])
+                        route_change.add_row([i + 1, "", "", new_ip_list[i], new_hop_info[new_ip_list[i]]['address']])
                     except Exception as e:
                         print(e)
                         logger.exception(e)
@@ -417,7 +574,7 @@ def route_change_check(target_ip, prefix, ip_list, hop_info):
             for i in range(len(ip_list)):
                 try:
                     route_change.add_row([i + 1, ip_list[i], hop_info[ip_list[i]]['address'],
-                                          new_ip_list[i], get_address(None, new_ip_list[i])])
+                                          new_ip_list[i], new_hop_info[new_ip_list[i]]['address']])
                 except IndexError:
                     route_change.add_row([i + 1, ip_list[i], hop_info[ip_list[i]]['address'], "", ""])
         print(ip_list)
@@ -450,7 +607,7 @@ def route_tests(hop_info, ip_list):
             print(f"{ip} is not reachable")
 
 
-def path_check(ip=None):
+def path_check(ip=None, user=None, pswd=None, port=None):
     ###
     # This function will check the path taken to the target MBU IPv6
     ###
@@ -482,7 +639,7 @@ def path_check(ip=None):
         i = 1
         while True:
             try:
-                gather_route(ip_list, hop_info)
+                gather_route(ip_list, hop_info, user, pswd, port)
                 break
             except Exception as e:
                 print(f"\n{e}\n")
@@ -570,14 +727,15 @@ def path_check(ip=None):
         print("Exiting...")
 
 
-def single_site_check():  # Return 0 if exiting single site check
+def single_site_check(user=None, pswd=None, port=None, check=True):  # Return 0 if exiting single site check
     ###
     # Single Site Check
     ###
     ip = ip_check()  # Prompt user for IP and check if valid IPv6
     if ip == 0 or ip == '0':  # Exit if user enters for IPv6
         return 0
-    mac = get_mac(None, ip)  # Get MAC address of connected NIC on target MBU
+    user, pswd, port = cred_check(user, pswd, port, check)
+    mac = get_mac(None, ip, user=user, pswd=pswd, port=port)  # Get MAC address of connected NIC on target MBU
     if mac == '\'':  # Value that is returned if no MAC is found
         url, serial, network_id, oui = "N/A", "N/A", "N/A", "N/A"
     else:
@@ -610,7 +768,7 @@ def single_site_check():  # Return 0 if exiting single site check
                 # Keeping target IP, but doing a new MAC lookup
                 ###
                 table = PrettyTable(["IP", "MAC", "OUI", "Serial", "URL"])  # PrettyTable for MAC lookup
-                mac = get_mac(None, ip)
+                mac = get_mac(None, ip, user=user, pswd=pswd, port=port)
                 if mac == '\'':  # Value that is returned if no MAC is found
                     table.add_row([ip, "None Found", "N/A", "N/A", "N/A"])
                     print(table)
@@ -634,14 +792,14 @@ def single_site_check():  # Return 0 if exiting single site check
                 # PTMP radio search for site that is not recorded in LinkView
                 # Should be run on anchor or seed MBU IPv6
                 ###
-                print(f"{ptmp_check(None, ip)}")  # Print PTMP check PrettyTable
+                print(f"{ptmp_check(None, ip, user=user, pswd=pswd, port=port)}")  # Print PTMP check PrettyTable
             elif choice == 3:
                 ###
                 # Address lookup for site
                 # Useful in single site check if running an MTR test and need to know the address of an IPv6 address
                 ###
                 table = PrettyTable(["IP", "Address"])
-                table.add_row([ip, get_address(None, ip)])
+                table.add_row([ip, get_address(None, ip, user=user, pswd=pswd, port=port)])
                 print(table)
             elif choice == 4:
                 ###
@@ -660,7 +818,8 @@ def single_site_check():  # Return 0 if exiting single site check
                 ip = ip_check()
                 if ip == 0 or ip == '0':
                     return 0
-                mac = get_mac(None, ip)
+                user, pswd, port = cred_check(user, pswd, port, True)
+                mac = get_mac(None, ip, user=user, pswd=pswd, port=port)
                 if mac == '\'':  # Value that is returned if no MAC is found
                     url, serial, network_id, oui = "N/A", "N/A", "N/A", "N/A"
                 else:
@@ -687,6 +846,7 @@ def main():
     ###
     # Program starts here
     ###
+    user, pswd, port = None, None, None
     try:
         ###
         # We first check if there is a file called routers.json in the same directory as this program.
@@ -763,9 +923,9 @@ def main():
                 print("Invalid Choice")
                 continue
             if choice == 1:
-                single_site_check()  # Functions for focusing on a single site
+                single_site_check(user=user, pswd=pswd, port=port, check=True)  # Functions for focusing on a single site
             elif choice == 2:
-                path_check()  # Functions for focusing on all sites in a path
+                path_check(user=user, pswd=pswd, port=port)  # Functions for focusing on all sites in a path
             elif choice == 3:
                 EeroTests.main()  # Some extra functions for Eero
             elif choice == 4:  # Separate updater python file needed
