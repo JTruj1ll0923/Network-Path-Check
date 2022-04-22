@@ -360,7 +360,7 @@ def route_print(hop_info):
         i += 1
 
 
-def gather_route(ip_list, hops=None, user=None, pswd=None, port=None):
+def gather_route(ip_list, hops=None, user=None, pswd=None, port=None, check=True):
     ###
     # Gathers the route table and all information for each hop
     ###
@@ -369,7 +369,6 @@ def gather_route(ip_list, hops=None, user=None, pswd=None, port=None):
     if ip_list is None:
         ip_list = []
 
-    check = True
     while True:
         choice = input("Do any hops use different credentials? (y/N): ")
         if choice == "Y" or choice == "y":
@@ -460,6 +459,9 @@ def gather_route(ip_list, hops=None, user=None, pswd=None, port=None):
                 hops[target_ip]["version"] = get_version(myconn)
                 myconn.close()
                 break
+            except paramiko.ssh_exception.AuthenticationException:
+                print(f"Error authenticating with {ip}, please check credentials")
+                return user, pswd, port, True
             except Exception as err:
                 i += 1
                 if i > 3:
@@ -470,16 +472,18 @@ def gather_route(ip_list, hops=None, user=None, pswd=None, port=None):
                     continue
         return user, pswd, port, False
 
+    try_again = True
+    fail = False
     for ip in ip_list:
         hops[ip] = {}
-        try_again = True
         try:
             hops[ip]['user'] = user
             hops[ip]['pswd'] = pswd
             hops[ip]['port'] = port
             while True:
                 try:
-                    user, pswd, port, fail = go_check(ip, user, pswd, port, check)
+                    if try_again:
+                        user, pswd, port, fail = go_check(ip, user, pswd, port, check)
                     if fail:
                         print(f"Failed to connect to {ip}. Maybe the credentials are wrong?")
                         while True:
@@ -508,10 +512,12 @@ def gather_route(ip_list, hops=None, user=None, pswd=None, port=None):
                 except Exception as e:
                     print(f"\n\tError: {e}")
                     continue
+            if try_again is False:
+                break
         except Exception as e:
             print(f"\n\tError: {e}")
             break
-    return hops
+    return hops, fail
 
 
 def route_change_check(target_ip, prefix, ip_list, hop_info, user=None, pswd=None, port=None):
@@ -549,7 +555,7 @@ def route_change_check(target_ip, prefix, ip_list, hop_info, user=None, pswd=Non
             else:
                 print("Invalid input. Please try again.")
                 continue
-        new_hop_info = gather_route(new_ip_list, new_hop_info, user, pswd, port)
+        new_hop_info, fail = gather_route(new_ip_list, new_hop_info, user, pswd, port, check)
         route_change = PrettyTable(["Hop Number", "Original Route", "Original Address", "New Route", "New Address"])
         if len(new_ip_list) > len(ip_list):
             for i in range(len(new_ip_list)):
@@ -637,9 +643,10 @@ def path_check(ip=None, user=None, pswd=None, port=None):
         ip_list = ip_format(ip_list)
         print(f"Gathering information for hops in traceroute to {target_ip}")
         i = 1
+        fail = False
         while True:
             try:
-                gather_route(ip_list, hop_info, user, pswd, port)
+                hop_info, fail = gather_route(ip_list, hop_info, user, pswd, port)
                 break
             except Exception as e:
                 print(f"\n{e}\n")
@@ -651,7 +658,8 @@ def path_check(ip=None, user=None, pswd=None, port=None):
                 else:
                     print(f"Unable to reach {target_ip}.\n, check your connection and try again.")
                     return 1
-
+        if fail:
+            return
         while True:
             try:
                 print("\n")
@@ -734,8 +742,15 @@ def single_site_check(user=None, pswd=None, port=None, check=True):  # Return 0 
     ip = ip_check()  # Prompt user for IP and check if valid IPv6
     if ip == 0 or ip == '0':  # Exit if user enters for IPv6
         return 0
-    user, pswd, port = cred_check(user, pswd, port, check)
-    mac = get_mac(None, ip, user=user, pswd=pswd, port=port)  # Get MAC address of connected NIC on target MBU
+    mac = "N/A"
+    while True:
+        try:
+            user, pswd, port = cred_check(user, pswd, port, check)
+            mac = get_mac(None, ip, user=user, pswd=pswd, port=port)  # Get MAC address of connected NIC on target MBU
+            break
+        except paramiko.ssh_exception.AuthenticationException:
+            print("Error authenticating, please enter correct credentials")
+            continue
     if mac == '\'':  # Value that is returned if no MAC is found
         url, serial, network_id, oui = "N/A", "N/A", "N/A", "N/A"
     else:
@@ -818,8 +833,15 @@ def single_site_check(user=None, pswd=None, port=None, check=True):  # Return 0 
                 ip = ip_check()
                 if ip == 0 or ip == '0':
                     return 0
-                user, pswd, port = cred_check(user, pswd, port, True)
-                mac = get_mac(None, ip, user=user, pswd=pswd, port=port)
+                while True:
+                    try:
+                        user, pswd, port = cred_check(user, pswd, port, check)
+                        mac = get_mac(None, ip, user=user, pswd=pswd,
+                                      port=port)  # Get MAC address of connected NIC on target MBU
+                        break
+                    except paramiko.ssh_exception.AuthenticationException:
+                        print("Error authenticating, please enter correct credentials")
+                        continue
                 if mac == '\'':  # Value that is returned if no MAC is found
                     url, serial, network_id, oui = "N/A", "N/A", "N/A", "N/A"
                 else:
